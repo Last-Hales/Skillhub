@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Hub - Connect Skills, Create Opportunities</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="container">
+            <div class="logo"><a href="index.html"><img src="assets/logo.jpg" alt="SkillHub logo"><span>SkillHub</span></a></div>
+            <div class="nav-links" id="navLinks">
+                <a href="index.html">Home</a>
+                <a href="login.html">Login</a>
+                <a href="signup.html">Sign Up</a>
+                <div class="user-menu" id="userMenu" style="display: none;">
+                    <a href="dashboard.html">Dashboard</a>
+                    <a href="profile.html">Profile</a>
+                    <a href="messages.html">Messages</a>
+                    <a href="contact.html">Contact Us</a>
+                    <button onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Connect with Skilled Workers or Find Your Next Opportunity</h1>
+            <p>SkillHub is a platform where customers find quality services and workers grow their business</p>
+            <div class="hero-buttons">
+                <button class="btn btn-primary" onclick="goToSignup('worker')">Join as Worker</button>
+                <button class="btn btn-secondary" onclick="goToSignup('customer')">Find Workers</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="search-section">
+        <div class="container">
+            <h2>Find Workers</h2>
+            <div class="search-container">
+                <input type="text" id="searchSkill" placeholder="Search by skill (e.g., plumbing, electrician)">
+                <input type="text" id="searchLocation" placeholder="Search by location">
+                <button onclick="searchWorkers()">Search</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="workers-section">
+        <div class="container">
+            <h2>Available Workers</h2>
+            <div class="workers-grid" id="workersGrid">
+                <p>Loading workers...</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 SkillHub. All rights reserved.</p>
+    </footer>
+
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

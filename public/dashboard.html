@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SkillHub</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="container">
+            <div class="logo"><a href="index.html"><img src="assets/logo.jpg" alt="SkillHub logo"><span>SkillHub</span></a></div>
+            <div class="nav-links" id="navLinks">
+                <a href="index.html">Home</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="profile.html">Profile</a>
+                <a href="messages.html">Messages</a>
+                <a href="contact.html">Contact Us</a>
+                <button onclick="logout()" class="btn btn-danger">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container dashboard-container">
+        <div class="sidebar">
+            <div class="user-info" id="userInfo">
+                <h3>User Profile</h3>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="active">Dashboard</a>
+                <a href="#" id="opportunitiesLink" style="display: none;">My Opportunities</a>
+                <a href="#" id="createOpportunityLink" style="display: none;">Create Opportunity</a>
+                <a href="messages.html">Messages</a>
+                <a href="profile.html">Profile Settings</a>
+                <a href="contact.html">Customer Service</a>
+            </nav>
+        </div>
+
+        <div class="main-content">
+            <!-- Customer Dashboard -->
+            <div id="customerDashboard" style="display: none;">
+                <h2>Welcome, Customer!</h2>
+                <p>Create an opportunity or browse available workers</p>
+                
+                <button class="btn btn-primary" onclick="goToCreateOpportunity()">Create New Opportunity</button>
+
+                <h3 style="margin-top: 2rem;">My Opportunities</h3>
+                <div id="myOpportunitiesList">
+                    <p>Loading opportunities...</p>
+                </div>
+            </div>
+
+            <!-- Worker Dashboard -->
+            <div id="workerDashboard" style="display: none;">
+                <h2>Welcome, Worker!</h2>
+                
+                <div class="worker-stats">
+                    <div class="stat-card">
+                        <h3>Your Rating</h3>
+                        <p id="workerRating">Loading...</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Completed Jobs</h3>
+                        <p id="completedJobs">Loading...</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Availability</h3>
+                        <label class="switch">
+                            <input type="checkbox" id="availabilityToggle" onchange="updateAvailability()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <h3>Available Opportunities</h3>
+                <div id="opportunitiesList">
+                    <p>Loading opportunities...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

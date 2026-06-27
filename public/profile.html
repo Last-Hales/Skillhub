@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - SkillHub</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="container">
+            <div class="logo"><a href="index.html"><img src="assets/logo.jpg" alt="SkillHub logo"><span>SkillHub</span></a></div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="profile.html">Profile</a>
+                <a href="messages.html">Messages</a>
+                <a href="contact.html">Contact Us</a>
+                <button onclick="logout()" class="btn btn-danger">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container profile-container">
+        <div class="profile-card">
+            <h2>Profile Settings</h2>
+            
+            <form id="profileForm">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="fullName" name="fullName" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="email" name="email" disabled>
+                </div>
+
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="phoneNumber" name="phoneNumber" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" id="address" name="address" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Country</label>
+                    <select id="country" name="country" required></select>
+                </div>
+
+                <div class="form-group">
+                    <label>State</label>
+                    <select id="state" name="state" required></select>
+                    <input type="text" id="stateText" name="stateText" style="display:none; margin-top: 0.75rem;" placeholder="Enter your state or region">
+                </div>
+
+                <!-- Worker-specific fields -->
+                <div id="workerProfileFields" style="display: none;">
+                    <h3>Professional Information</h3>
+                    
+                    <div class="form-group">
+                        <label>Skills</label>
+                        <input type="text" id="skills" placeholder="Comma separated skills">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Services</label>
+                        <input type="text" id="services" placeholder="Services you provide">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Handwork/Specialization</label>
+                        <input type="text" id="handwork" placeholder="Your specialization">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Years of Experience</label>
+                        <input type="number" id="yearsOfExperience">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Bio</label>
+                        <textarea id="bio" placeholder="Tell customers about yourself"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Rating: <span id="workerRating">0</span>/5.0</label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Completed Jobs: <span id="completedJobsCount">0</span></label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Changes</button>
+            </form>
+
+            <button onclick="logout()" class="btn btn-danger" style="width: 100%; margin-top: 1rem;">Logout</button>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/country-state.js"></script>
+    <script src="js/profile.js"></script>
+</body>
+</html>

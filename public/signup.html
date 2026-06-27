@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - SkillHub</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="container">
+            <div class="logo"><a href="index.html"><img src="assets/logo.jpg" alt="SkillHub logo"><span>SkillHub</span></a></div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="login.html">Login</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container auth-container">
+        <div class="auth-form">
+            <h2>Create Your Account</h2>
+            
+            <div class="form-tabs">
+                <button class="tab-btn active" onclick="switchTab('customer')">Customer</button>
+                <button class="tab-btn" onclick="switchTab('worker')">Worker</button>
+            </div>
+
+            <form id="signupForm">
+                <!-- Common Fields -->
+                <div class="form-group">
+                    <label>Email Address *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input type="password" id="password" name="password" required>
+                    <small>Password must have uppercase, lowercase, number, symbol, and at least 8 characters.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Confirm Password *</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" id="fullName" name="fullName" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Phone Number *</label>
+                    <input type="tel" id="phoneNumber" name="phoneNumber" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Address *</label>
+                    <input type="text" id="address" name="address" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Country *</label>
+                    <select id="country" name="country" required></select>
+                </div>
+
+                <div class="form-group">
+                    <label>State *</label>
+                    <select id="state" name="state" required></select>
+                    <input type="text" id="stateText" name="stateText" style="display:none; margin-top: 0.75rem;" placeholder="Enter your state or region">
+                </div>
+
+                <!-- Worker Only Fields -->
+                <div id="workerFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Skills (comma separated) *</label>
+                        <input type="text" id="skills" placeholder="e.g., plumbing, pipe repair" name="skills">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Services Rendered *</label>
+                        <input type="text" id="services" placeholder="Describe your main services" name="services">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Handwork/Specialization *</label>
+                        <input type="text" id="handwork" placeholder="What are you specialized in?" name="handwork">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Years of Experience</label>
+                        <input type="number" id="yearsOfExperience" name="yearsOfExperience">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Bio</label>
+                        <textarea id="bio" name="bio" placeholder="Tell customers about yourself"></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Sign Up</button>
+                <p style="text-align: center; margin-top: 1rem;">
+                    Already have an account? <a href="login.html">Login here</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/country-state.js"></script>
+    <script>
+        let currentUserType = 'customer';
+
+        function switchTab(type) {
+            currentUserType = type;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const workerFields = document.getElementById('workerFields');
+            if (type === 'worker') {
+                workerFields.style.display = 'block';
+            } else {
+                workerFields.style.display = 'none';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            populateCountries('country');
+            populateStates('country', 'state', 'stateText');
+            document.getElementById('country').addEventListener('change', () => {
+                populateStates('country', 'state', 'stateText');
+            });
+        });
+
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+
+            if (!passwordPattern.test(password)) {
+                alert('Password must contain uppercase, lowercase, a number, a symbol, and be at least 8 characters long.');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match. Please confirm your password.');
+                return;
+            }
+
+            const formData = {
+                email: document.getElementById('email').value,
+                password,
+                fullName: document.getElementById('fullName').value,
+                phoneNumber: document.getElementById('phoneNumber').value,
+                address: document.getElementById('address').value,
+                country: document.getElementById('country').value,
+                state: getStateInputValue('state', 'stateText'),
+                userType: currentUserType
+            };
+
+            if (currentUserType === 'worker') {
+                formData.skills = document.getElementById('skills').value.split(',').map(s => s.trim());
+                formData.services = document.getElementById('services').value;
+                formData.handwork = document.getElementById('handwork').value;
+                formData.yearsOfExperience = document.getElementById('yearsOfExperience').value;
+                formData.bio = document.getElementById('bio').value;
+            }
+
+            try {
+                const response = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    alert('Account created successfully!');
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert('Signup failed: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Network error occurred');
+            }
+        });
+    </script>
+</body>
+</html>

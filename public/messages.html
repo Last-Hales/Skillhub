@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - SkillHub</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="container">
+            <div class="logo"><a href="index.html"><img src="assets/logo.jpg" alt="SkillHub logo"><span>SkillHub</span></a></div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="profile.html">Profile</a>
+                <a href="messages.html">Messages</a>
+                <a href="contact.html">Contact Us</a>
+                <button onclick="logout()" class="btn btn-danger">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container messaging-container">
+        <div class="conversations-panel">
+            <h3>Conversations</h3>
+            <div id="conversationsList">
+                <p>Loading conversations...</p>
+            </div>
+        </div>
+
+        <div class="chat-panel">
+            <div id="noChatSelected" style="text-align: center; padding: 2rem;">
+                <p>Select a conversation to start messaging</p>
+            </div>
+
+            <div id="chatWindow" style="display: none;">
+                <div class="chat-header" id="chatHeader">
+                    <h3 id="chatUserName">User</h3>
+                </div>
+                <div class="messages-container" id="messagesContainer">
+                    <!-- Messages will be loaded here -->
+                </div>
+                <div class="message-input-area">
+                    <input type="text" id="messageInput" placeholder="Type your message...">
+                    <button onclick="sendMessage()" class="btn btn-primary">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/messaging.js"></script>
+</body>
+</html>

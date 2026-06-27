@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Opportunity - SkillHub</title>
+    <link rel="icon" href="assets/logo.jpg" type="image/jpeg">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="container">
+            <div class="logo"><a href="index.html"><img src="assets/logo.jpg" alt="SkillHub logo"><span>SkillHub</span></a></div>
+            <div class="nav-links" id="navLinks">
+                <a href="index.html">Home</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="profile.html">Profile</a>
+                <a href="messages.html">Messages</a>
+                <a href="contact.html">Contact Us</a>
+                <button onclick="logout()" class="btn btn-danger">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="form-container" style="max-width: 600px; margin: 2rem auto;">
+            <h2>Create New Opportunity</h2>
+            
+            <form id="opportunityForm">
+                <div class="form-group">
+                    <label>Opportunity Title *</label>
+                    <input type="text" id="title" name="title" placeholder="e.g., Need plumbing repair" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Description *</label>
+                    <textarea id="description" name="description" placeholder="Describe the work in detail" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Skill Required *</label>
+                    <input type="text" id="skillRequired" name="skillRequired" placeholder="e.g., plumbing, electrician" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Country *</label>
+                    <select id="country" name="country" required></select>
+                </div>
+
+                <div class="form-group">
+                    <label>State *</label>
+                    <select id="state" name="state" required></select>
+                    <input type="text" id="stateText" name="stateText" style="display:none; margin-top: 0.75rem;" placeholder="Enter your state or region">
+                </div>
+
+                <div class="form-group">
+                    <label>Location *</label>
+                    <input type="text" id="location" name="location" placeholder="Where is the work needed?" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Budget (Optional)</label>
+                    <input type="number" id="budget" name="budget" placeholder="Budget in currency">
+                </div>
+
+                <div class="form-group">
+                    <label>Deadline (Optional)</label>
+                    <input type="datetime-local" id="deadline" name="deadline">
+                </div>
+
+                <div class="form-group">
+                    <label>Priority Level</label>
+                    <select id="priority" name="priority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Create Opportunity</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/country-state.js"></script>
+    <script>
+        // Verify user is logged in and is a customer
+        if (!localStorage.getItem('token')) {
+            window.location.href = 'login.html';
+        }
+
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user.userType !== 'customer') {
+            alert('Only customers can create opportunities');
+            window.location.href = 'dashboard.html';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            populateCountries('country');
+            populateStates('country', 'state', 'stateText');
+            document.getElementById('country').addEventListener('change', () => {
+                populateStates('country', 'state', 'stateText');
+            });
+        });
+
+        document.getElementById('opportunityForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                skillRequired: document.getElementById('skillRequired').value,
+                country: document.getElementById('country').value,
+                state: getStateInputValue('state', 'stateText'),
+                location: document.getElementById('location').value,
+                budget: document.getElementById('budget').value ? parseFloat(document.getElementById('budget').value) : null,
+                deadline: document.getElementById('deadline').value,
+                priority: document.getElementById('priority').value
+            };
+
+            try {
+                const response = await fetch('/api/opportunities', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(`Opportunity created! ${data.notifiedWorkers} workers have been notified.`);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to create opportunity'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Network error occurred');
+            }
+        });
+    </script>
+</body>
+</html>

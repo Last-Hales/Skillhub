@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Our Services — Your Company</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <h1 class="brand">Your Company</h1>
+      <nav class="nav">
+        <a href="#services">Services</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#testimonials">Testimonials</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <h2>Professional services that grow your business</h2>
+          <p>We deliver tailored solutions: strategy, design, and implementation.</p>
+          <a class="btn" href="#contact">Get a Quote</a>
+        </div>
+        <div class="hero-graphic" aria-hidden="true">
+          <svg width="300" height="200" viewBox="0 0 300 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="300" height="200" rx="16" fill="#E8F6FF" />
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section id="services" class="services container">
+      <h3>Our Services</h3>
+      <div class="grid">
+        <article class="card">
+          <h4>Consulting</h4>
+          <p>Business strategy, planning, and roadmaps that align with your goals.</p>
+        </article>
+        <article class="card">
+          <h4>Design</h4>
+          <p>User-centered design, branding, and visual identity.</p>
+        </article>
+        <article class="card">
+          <h4>Development</h4>
+          <p>Web and mobile development with performance and accessibility in mind.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="pricing" class="pricing container">
+      <h3>Pricing</h3>
+      <div class="grid">
+        <div class="price-card">
+          <h4>Starter</h4>
+          <p class="price">$999</p>
+          <p>Perfect for small projects and quick launches.</p>
+        </div>
+        <div class="price-card popular">
+          <h4>Business</h4>
+          <p class="price">$2,499</p>
+          <p>For growing teams that need a reliable partner.</p>
+        </div>
+        <div class="price-card">
+          <h4>Enterprise</h4>
+          <p class="price">Custom</p>
+          <p>Scalable solutions for complex requirements.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="testimonials" class="testimonials container">
+      <h3>Testimonials</h3>
+      <blockquote>
+        "Fast turnaround and great communication — highly recommended."
+        <cite>— Alex R., CEO</cite>
+      </blockquote>
+    </section>
+
+    <section id="contact" class="contact container">
+      <h3>Contact Us</h3>
+      <form id="contactForm" novalidate>
+        <label>
+          Name
+          <input type="text" name="name" required>
+        </label>
+        <label>
+          Email
+          <input type="email" name="email" required>
+        </label>
+        <label>
+          Message
+          <textarea name="message" rows="4" required></textarea>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn">Send Message</button>
+        </div>
+        <p id="formMessage" class="form-message" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <small>© <span id="year"></span> Your Company — All rights reserved.</small>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
