@@ -1,0 +1,102 @@
+[
+  {
+    "name": "Sign in, complete profile, upload avatar and use the installed app",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "sign-in and role onboarding",
+      "profile picture storage and display",
+      "portfolio link",
+      "hexagon SkillHub installation icon",
+      "bottom navigation and dark mode"
+    ],
+    "description": "Verifies a new user can create a profile, upload an image, save a portfolio link and navigate the mobile app.",
+    "steps": [
+      "Sign in as a new user and choose Worker",
+      "Complete the required profile fields and add a portfolio link",
+      "Upload a JPG profile photo and save the profile",
+      "Switch dark mode on and use the bottom navigation"
+    ],
+    "expected": "The profile photo and portfolio are visible after reload, the dark theme is applied and the mobile navigation remains usable."
+  },
+  {
+    "name": "Customer posts a job, chooses an applicant, chats and both sides can report",
+    "viewport": "desktop",
+    "covers": [
+      "customer job creation",
+      "worker application workflow",
+      "applicant ratings and profile details",
+      "customer worker selection",
+      "live WebSocket chat and message receipts",
+      "job reports by both participants"
+    ],
+    "description": "Verifies the normal job flow from posting through selection and conversation, including reports from both sides.",
+    "steps": [
+      "Actor A signs in as a customer and posts a job",
+      "Actor B signs in as an available worker and applies",
+      "Actor A reviews the applicant profile and selects Actor B",
+      "Exchange messages and confirm the recipient sees them live",
+      "Actor A and Actor B each submit a report for the job"
+    ],
+    "expected": "The selected worker is assigned, the chat is limited to the two participants, message receipt indicators update and both reports are accepted."
+  },
+  {
+    "name": "Worker creates a Team-Up and builds a multi-worker team",
+    "viewport": "desktop",
+    "covers": [
+      "worker Team-Up creation",
+      "team size and project details",
+      "multiple worker applications",
+      "team leader applicant selection",
+      "group chat access",
+      "team leader reputation"
+    ],
+    "description": "Verifies a worker can post a collaboration request, accept several applicants and coordinate a team.",
+    "steps": [
+      "Actor A signs in as a worker and creates a Team-Up requiring two additional workers",
+      "Actors B and C sign in as workers and apply",
+      "Actor A adds both workers to the team",
+      "Actor A, B and C open the Team-Up conversation and exchange messages"
+    ],
+    "expected": "The Team-Up remains open until the requested number of workers is selected, then becomes in progress and all selected members can access the group chat."
+  },
+  {
+    "name": "Require mutual completion confirmation and allow only one rating per job",
+    "viewport": "desktop",
+    "covers": [
+      "two-party completion confirmation",
+      "completion notification",
+      "ratings after completion",
+      "one-time rating enforcement",
+      "rating option hidden after submission"
+    ],
+    "description": "Verifies a job is not completed until all required participants confirm and each user can rate only once.",
+    "steps": [
+      "Actor A and Actor B open an accepted job",
+      "Actor A confirms completion and refreshes Jobs",
+      "Actor B confirms completion",
+      "Actor A submits a rating and returns to the job history"
+    ],
+    "expected": "The job stays in progress after the first confirmation, changes to Completed after the second, and the rating control disappears for Actor A after submission."
+  },
+  {
+    "name": "Saved workers, job cancellation and permission guardrails",
+    "viewport": "mobile",
+    "covers": [
+      "save and unsave workers",
+      "saved worker filtering",
+      "job cancellation and history",
+      "role-based permissions",
+      "duplicate application prevention",
+      "participant-only reporting"
+    ],
+    "description": "Verifies saved professionals persist and users cannot perform job actions outside their permissions.",
+    "steps": [
+      "Sign in as a customer and save a worker profile",
+      "Open Saved workers and verify the worker appears",
+      "Remove the worker from Saved workers",
+      "Sign in as a worker and attempt to delete another customer’s job or report a job they did not participate in"
+    ],
+    "expected": "Saved workers can be added and removed, and unauthorized deletion or reporting is blocked with a clear message."
+  }
+]
