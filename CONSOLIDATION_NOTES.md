@@ -1,13 +1,10 @@
-# SkillHub
-
-SkillHub is a service marketplace that connects customers with skilled workers by service and location.
+# SkillHub consolidation notes
 
 ## Current application
 
-The active application is deployed on AppDeploy:
-https://skillhub-xui394.v2.appdeploy.ai/
+Live AppDeploy app: https://skillhub-xui394.v2.appdeploy.ai/
 
-The current frontend is a React + TypeScript application and uses AppDeploy-managed authentication, API, and realtime services. A plain static GitHub Pages deployment is not a replacement for that backend.
+The active app is React + TypeScript + Vite and uses AppDeploy-managed authentication, API, database, storage, and realtime services. The AppDeploy SDK packages are platform-injected; do not add `@appdeploy/client` or `@appdeploy/sdk` to the ordinary npm manifest.
 
 ## Current product capabilities
 
@@ -25,15 +22,27 @@ The current frontend is a React + TypeScript application and uses AppDeploy-mana
 
 The previous repository included a separate Express/MongoDB/JWT implementation. Do not run that legacy server alongside the AppDeploy backend or copy its authentication, permissive CORS, or realtime room-handling code into the current application without a security review.
 
-The old admin setup included a hard-coded default credential. Treat that credential as exposed: do not reuse it, and rotate it if it was ever used. Remove obsolete logs, generic template pages, and outdated setup instructions as part of the cleanup.
+The old admin setup included a hard-coded default credential. Treat that credential as exposed: do not reuse it, and rotate it if it was ever used. Remove obsolete logs, generic template pages, and outdated setup instructions as part of cleanup.
+
+## Security status
+
+- The realtime subscription endpoints now require authentication and limit subscriptions to job-chat entities where the signed-in user is a participant in the opportunity.
+- Subscription removal is scoped to the authenticated user's own records.
+- The platform reference reviewed so far does not establish a supported way to prove that a client-submitted realtime connection ID belongs to the authenticated user. This remains an open security item; do not mark realtime connection ownership as fully resolved until it is verified with a supported mechanism and tested.
+- Keep secrets, identity documents, user data, and credentials out of source control.
 
 ## Important release notes
 
 - The current verification feature submits a review request; it does not itself perform NIN or passport verification. Any identity check must use an authorised provider and secure handling.
 - The current opportunity flow uses worker applications followed by customer selection. It should not be described as automatic “closest worker wins” dispatch unless that workflow is implemented and tested.
-- Review access control for realtime subscription endpoints before production use.
-- Keep secrets, identity documents, user data, and credentials out of source control.
+- The live AppDeploy app's logo and favicon resources have been uploaded and applied. The GitHub source branch still needs the actual binary image files committed under `public/resources/` for a complete portable repository.
+- A GitHub clone is not yet independently buildable outside AppDeploy because the managed SDK services are injected by the platform. A standalone build needs compatible backend services or an explicitly documented AppDeploy development workflow.
 
-## Development
+## Release checklist
 
-Use the AppDeploy project environment for the current backend and managed SDK integrations. Before making this repository a standalone build, document and provision the required backend services and SDK dependencies, then run build and security tests.
+1. Resolve and test realtime connection ownership.
+2. Transfer the logo and favicon binary files into the GitHub branch.
+3. Review and remove obsolete legacy files without losing any useful, securely rebuilt admin features.
+4. Run the AppDeploy QA suite and an independent production build/test workflow.
+5. Confirm the proximity-first, first-accept dispatch behavior if it remains a product requirement.
+6. Only then review and merge the consolidation branch.
