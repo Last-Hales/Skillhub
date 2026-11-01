@@ -255,7 +255,16 @@ function App() {
       setData(current => {
         if (!current) return current;
         const merged = new Map((current.myJobs ?? []).map(job => [job.id, job]));
-        (page.myJobs ?? []).forEach(job => merged.set(job.id, { ...merged.get(job.id), ...job }));
+        (page.myJobs ?? []).forEach(job => {
+          const previous = merged.get(job.id);
+          const applicants = new Map((previous?.applicants ?? []).map(applicant => [applicant.id, applicant]));
+          (job.applicants ?? []).forEach(applicant => applicants.set(applicant.id, applicant));
+          merged.set(job.id, {
+            ...previous,
+            ...job,
+            ...(previous?.applicants || job.applicants ? { applicants: [...applicants.values()] } : {}),
+          });
+        });
         return { ...current, myJobs: [...merged.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), myJobsCursors: page.myJobsCursors ?? current.myJobsCursors };
       });
     } catch (err) {
