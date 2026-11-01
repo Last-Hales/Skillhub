@@ -1,5 +1,27 @@
 [
   {
+    "name": "Discovery feeds load additional worker and opportunity pages",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "worker discovery cursor",
+      "opportunity discovery cursor",
+      "bounded database reads",
+      "duplicate-free append",
+      "search across loaded pages"
+    ],
+    "description": "Verifies discovery starts with bounded pages and can append further results using continuation tokens.",
+    "steps": [
+      "Sign in as a customer and open Discover",
+      "Confirm the initial worker feed is limited to one page and Load more results appears when a continuation token exists",
+      "Select Load more results and confirm the next worker page is appended",
+      "Search for a worker from the newly loaded page and confirm the search finds that worker",
+      "Sign in as a worker and repeat the flow for open opportunities",
+      "Load another page and confirm previously shown jobs are not duplicated"
+    ],
+    "expected": "Each discovery request reads at most 100 profiles and 100 opportunities, advances the relevant continuation token, appends unique records, and keeps search functional across all loaded results."
+  },
+  {
     "name": "Portfolio interactions find posts beyond the first feed page",
     "sanity": true,
     "viewport": "mobile",
