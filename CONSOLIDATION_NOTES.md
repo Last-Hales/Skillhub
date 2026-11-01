@@ -38,7 +38,7 @@ The old admin setup included a hard-coded default credential. Treat that credent
 
 - The current verification feature submits a review request; it does not itself perform NIN or passport verification. Any identity check must use an authorised provider and secure handling.
 - Standard service opportunities now use direct first-successful acceptance from the worker UI; the backend conditionally changes only an open opportunity to accepted. Team-Up posts retain applications and organiser selection. This is not yet proximity-first push dispatch: workers must discover the opportunity in the app, and real-world concurrent acceptance still needs integration testing.
-- The live AppDeploy app's logo and favicon resources have been uploaded and applied. The GitHub source branch still needs the actual binary image files committed under `public/resources/` for a complete portable repository.
+- The live AppDeploy app has the validated resources `public/resources/skillhub-logo.jpg` and `public/resources/favicon.jpg`. The React landing page, onboarding screen and sidebar already reference `/resources/skillhub-logo.jpg`; `index.html` and the web manifest reference `/resources/favicon.jpg`. The binary resources are managed by AppDeploy and are not yet committed to GitHub, so a repository clone still needs those image files added for a fully portable source checkout.
 - A GitHub clone is not yet independently buildable outside AppDeploy because the managed SDK services are injected by the platform. A standalone build needs compatible backend services or an explicitly documented AppDeploy development workflow.
 
 ## Release checklist
