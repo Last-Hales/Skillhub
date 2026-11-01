@@ -17,9 +17,10 @@
       "Select Load more results and confirm the next worker page is appended",
       "Search for a worker from the newly loaded page and confirm the search finds that worker",
       "Sign in as a worker and repeat the flow for open opportunities",
-      "Load another page and confirm previously shown jobs are not duplicated"
+      "Load another page and confirm previously shown jobs are not duplicated",
+      "When one feed has no continuation token but the other still does, load another page and confirm the exhausted feed is not fetched again from its first page."
     ],
-    "expected": "Each discovery request reads at most 100 profiles and 100 opportunities, advances the relevant continuation token, appends unique records, and keeps search functional across all loaded results."
+    "expected": "Each discovery request reads at most 100 profiles and 100 opportunities, advances the relevant continuation token, appends unique records, and keeps search functional across all loaded results. A feed with a null cursor is treated as exhausted and is not restarted or reread."
   },
   {
     "name": "Portfolio interactions find posts beyond the first feed page",
