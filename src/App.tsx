@@ -628,7 +628,9 @@ function App() {
       const page = response.data as { messages: ChatMessage[]; nextToken?: string | null };
       setMessages(page.messages);
       setMessageNextToken(page.nextToken ?? null);
-      await api.post('/api/messages/' + encodeURIComponent(selectedJob.id) + '/read');
+      await api.post('/api/messages/' + encodeURIComponent(selectedJob.id) + '/read', {
+        messageIds: page.messages.map(message => message.id),
+      });
     } catch (err) {
       setErrorText(
         err instanceof Error ? err.message : 'Could not refresh messages.'
@@ -646,6 +648,9 @@ function App() {
       const page = response.data as { messages: ChatMessage[]; nextToken?: string | null };
       setMessages(current => [...page.messages, ...current.filter(item => !page.messages.some(older => older.id === item.id))]);
       setMessageNextToken(page.nextToken ?? null);
+      await api.post('/api/messages/' + encodeURIComponent(selectedJob.id) + '/read', {
+        messageIds: page.messages.map(message => message.id),
+      });
     } catch (err) {
       setErrorText(err instanceof Error ? err.message : 'Could not load older messages.');
     } finally {
