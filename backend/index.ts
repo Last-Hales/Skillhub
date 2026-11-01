@@ -190,6 +190,63 @@ export const handler = router({
     },
   ],
 
+  'GET /api/discovery-page': [
+    requireAuth(),
+    async ({ user, query }) => {
+      const currentUser = user!;
+      const [profile] = await db.get<Profile>('profiles', [currentUser.userId]);
+      if (!profile) return error('Complete your profile before browsing SkillHub.', 400);
+      const profileToken = cleanText(query.profilesNextToken, 2048);
+      const opportunityToken = cleanText(query.opportunitiesNextToken, 2048);
+      const [profilesPage, jobsPage, ratingsPage, applicationsPage] = await Promise.all([
+        db.list<Profile>('profiles', { limit: 100, ...(profileToken ? { nextToken: profileToken } : {}) }),
+        db.list<Opportunity>('opportunities', { limit: 100, ...(opportunityToken ? { nextToken: opportunityToken } : {}) }),
+        db.list<{ targetId: string; score: number }>('ratings', { limit: 500 }),
+        db.list<Application>('applications', { limit: 500 }),
+      ]);
+      const imagePaths = [...new Set(profilesPage.items.map(item => item.profileImagePath).filter((path): path is string => Boolean(path)))];
+      const imageUrls = imagePaths.length ? await storage.url(imagePaths) : [];
+      const imageByPath = new Map(imageUrls.map(item => [item.path, item.url]));
+      const workers = profilesPage.items
+        .filter(item => item.role === 'worker' && item.available)
+        .map(item => {
+          const workerId = (item as Profile & { id: string }).id;
+          const ownRatings = ratingsPage.items.filter(rating => rating.targetId === workerId);
+          return {
+            id: workerId,
+            role: item.role,
+            fullName: item.fullName,
+            country: item.country,
+            state: item.state,
+            skills: item.skills,
+            available: item.available,
+            rating: ownRatings.length ? ownRatings.reduce((sum, rating) => sum + rating.score, 0) / ownRatings.length : 0,
+            ratingCount: ownRatings.length,
+            profileImage: item.profileImagePath ? imageByPath.get(item.profileImagePath) : item.profileImage,
+            portfolio: item.portfolio,
+            verified: item.verificationStatus === 'verified',
+          };
+        });
+      const applications = applicationsPage.items;
+      const opportunities = jobsPage.items
+        .filter(job => {
+          const jobId = (job as Opportunity & { id: string }).id;
+          return job.status === 'open' &&
+            job.customerId !== currentUser.userId &&
+            !(profile.role === 'worker' && applications.some(app => app.jobId === jobId && app.workerId === currentUser.userId));
+        })
+        .map(job => ({ id: (job as Opportunity & { id: string }).id, ...job }));
+      return json({
+        workers,
+        opportunities,
+        discoveryCursors: {
+          profiles: profilesPage.nextToken ?? null,
+          opportunities: jobsPage.nextToken ?? null,
+        },
+      });
+    },
+  ],
+
   'POST /api/profile': [
     requireAuth(),
     async ({ body, user }) => {
