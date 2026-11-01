@@ -552,10 +552,13 @@ export const handler = router({
         const existing = await db.get('completionConfirmations', [confirmationId]);
         if (!existing[0]) return error('Could not record your completion confirmation.', 500);
       }
-      const confirmationPage = await db.list<{ jobId: string; userId: string }>('completionConfirmations', { limit: 2000 });
+      const confirmationIds = required.map(id =>
+        (params.id + '_' + id).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 180)
+      );
+      const confirmationRows = await db.get<{ jobId: string; userId: string }>('completionConfirmations', confirmationIds, { consistent: true });
       const confirmed = [...new Set([
         ...(job.completionConfirmedBy ?? []),
-        ...confirmationPage.items.filter(item => item.jobId === params.id).map(item => item.userId),
+        ...confirmationRows.filter((item): item is { jobId: string; userId: string } => Boolean(item) && item!.jobId === params.id).map(item => item.userId),
       ])];
       const completedNow = required.every(id => confirmed.includes(id));
       if (completedNow) {
