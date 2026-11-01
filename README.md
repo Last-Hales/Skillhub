@@ -34,7 +34,7 @@ The AppDeploy runtime supplies `@appdeploy/client` to the frontend and `@appdepl
 - Worker profiles, skills, locations and availability
 - Search and discovery
 - Customer opportunities; direct first-successful acceptance for standard service jobs; team-up applications and organiser selection
-- In-app messaging and notifications
+- In-app messaging and notifications (history pagination is bounded, but per-conversation chronological cursor ordering remains to be verified)
 - Ratings and completion workflows
 - Saved workers, portfolios and reporting
 
