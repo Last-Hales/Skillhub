@@ -222,20 +222,44 @@ export const handler = router({
         ...directJobs.map(job => (job as Opportunity & { id: string }).id),
         ...applicationJobIds,
       ])];
-      const fetchedJobs = ids.length ? await db.get<Opportunity>('opportunities', ids) : [];
-      const jobById = new Map(fetchedJobs.filter(Boolean).map(job => [(job as Opportunity & { id: string }).id, job]));
+      // db.get returns records in request order and does not attach their database IDs.
+      // Keep the requested IDs alongside each returned record, and stay within the 500-key cap.
+      const jobChunks: string[][] = [];
+      for (let index = 0; index < ids.length; index += 500) jobChunks.push(ids.slice(index, index + 500));
+      const fetchedJobChunks = await Promise.all(jobChunks.map(chunk => db.get<Opportunity>('opportunities', chunk)));
+      const jobById = new Map<string, Opportunity>();
+      fetchedJobChunks.forEach((records, chunkIndex) => {
+        jobChunks[chunkIndex].forEach((id, recordIndex) => {
+          const record = records[recordIndex];
+          if (record) jobById.set(id, record);
+        });
+      });
       const currentApplications = applicationsPage.items;
-      const workerIds = [...new Set(currentApplications.filter(app => directJobs.some(job => (job as Opportunity & { id: string }).id === app.jobId) && app.workerId !== currentUser.userId).map(app => app.workerId))];
+      const workerIds = [...new Set(currentApplications
+        .filter(app => directJobs.some(job => (job as Opportunity & { id: string }).id === app.jobId) && app.workerId !== currentUser.userId)
+        .map(app => app.workerId))];
       const [workerProfiles, ratingsPage] = await Promise.all([
         workerIds.length ? db.get<Profile>('profiles', workerIds) : Promise.resolve([]),
         db.list<{ targetId: string; score: number }>('ratings', { limit: 500 }),
       ]);
-      const profileById = new Map(workerProfiles.filter(Boolean).map(worker => [(worker as Profile & { id: string }).id, worker]));
+      const profileById = new Map<string, Profile>();
+      workerIds.forEach((id, index) => {
+        const worker = workerProfiles[index];
+        if (worker) profileById.set(id, worker);
+      });
+      const workerImagePaths = [...new Set(workerProfiles
+        .filter((worker): worker is Profile => Boolean(worker?.profileImagePath))
+        .map(worker => worker.profileImagePath as string))];
+      const workerImageUrls = workerImagePaths.length ? await storage.url(workerImagePaths) : [];
+      const workerImageByPath = new Map(workerImageUrls.map(item => [item.path, item.url]));
+      const freshWorkerImage = (worker?: Profile) => worker
+        ? worker.profileImagePath ? workerImageByPath.get(worker.profileImagePath) : worker.profileImage
+        : undefined;
       const ratings = ratingsPage.items;
       const myJobs = ids.map(id => {
         const job = jobById.get(id);
         if (!job) return null;
-        const item = job as Opportunity & { id: string };
+        const item = job as Opportunity;
         const ownApplication = currentApplications.find(app => app.jobId === id && app.workerId === currentUser.userId);
         const applicants = item.customerId === currentUser.userId
           ? currentApplications.filter(app => app.jobId === id).map(app => {
@@ -243,12 +267,11 @@ export const handler = router({
               const workerRatings = ratings.filter(rating => rating.targetId === app.workerId);
               return {
                 ...app,
-                id: (app as Application & { id: string }).id,
                 workerSkills: worker?.skills ?? '',
                 workerState: worker?.state ?? '',
                 workerRating: workerRatings.length ? workerRatings.reduce((sum, rating) => sum + rating.score, 0) / workerRatings.length : 0,
                 workerRatingCount: workerRatings.length,
-                workerImage: worker?.profileImage,
+                workerImage: freshWorkerImage(worker),
                 workerVerified: worker?.verificationStatus === 'verified',
               };
             })
