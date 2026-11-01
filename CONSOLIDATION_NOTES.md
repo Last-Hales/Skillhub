@@ -99,3 +99,9 @@ The old admin setup included a hard-coded default credential. Treat that credent
 - Opening a conversation, refreshing it, and loading an older page now submit the IDs actually displayed on that page for read-receipt updates.
 - This corrects read-receipt targeting but does not solve global-table cursor ordering or guarantee that a cursor page contains the next chronologically older messages for a specific conversation. That remains an open chat-history design limitation.
 - Added QA coverage for cross-conversation ID rejection and bounded keyed read receipts. The scenario has not yet been executed in AppDeploy QA.
+
+
+## Chat pagination QA correction
+
+- Updated the chat pagination test so it no longer asserts that a global-table cursor page is necessarily older than the current conversation page. It now verifies duplicate-free merging while explicitly preserving the chronological ordering/completeness limitation.
+- Removed duplicated read-receipt assertions in the QA scenario. Read-receipt behavior remains bounded to up to 100 caller-supplied message IDs, each checked against the authorized job and sender identity.
