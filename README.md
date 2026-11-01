@@ -4,7 +4,7 @@ SkillHub is a service marketplace that helps customers discover skilled workers 
 
 ## Current application
 
-The active codebase is a React 19 + Vite + TypeScript single-page application with an AppDeploy-managed backend and authentication.
+The active codebase is a React 19 + Vite + TypeScript single-page application with an AppDeploy-managed backend and authentication. The SkillHub logo and favicon are configured at `/resources/skillhub-logo.jpg` and `/resources/favicon.jpg` in the AppDeploy app.
 
 - Frontend: `src/`
 - Backend routes and realtime handlers: `backend/`
