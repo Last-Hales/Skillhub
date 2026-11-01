@@ -465,9 +465,15 @@ function App() {
     setBusy(true);
     setErrorText('');
     try {
-      await api.post('/api/opportunities/' + encodeURIComponent(job.id) + '/apply');
-      await refresh();
-      setNotice('Application sent. The customer will choose from the applicants.');
+      if (job.kind === 'team') {
+        await api.post('/api/opportunities/' + encodeURIComponent(job.id) + '/apply');
+        await refresh();
+        setNotice('Application sent. The team organiser will choose from the applicants.');
+      } else {
+        await api.post('/api/opportunities/' + encodeURIComponent(job.id) + '/accept');
+        await refresh();
+        setNotice('You accepted this opportunity. The customer can now chat with you in SkillHub.');
+      }
     } catch (err) {
       setErrorText(err instanceof Error ? err.message : 'Could not apply for this job.');
     } finally {
@@ -1243,7 +1249,7 @@ function App() {
                         onClick={() => applyForOpportunity(job)}
                       >
                         {profile.available
-                          ? job.kind === 'team' ? 'Apply to join team' : 'Apply for job'
+                          ? job.kind === 'team' ? 'Apply to join team' : 'Accept job'
                           : 'Set available to apply'}{' '}
                         <ArrowRight size={15} />
                       </button>
