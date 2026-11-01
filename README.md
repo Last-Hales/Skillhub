@@ -33,12 +33,12 @@ The AppDeploy runtime supplies `@appdeploy/client` to the frontend and `@appdepl
 - Customer and worker accounts
 - Worker profiles, skills, locations and availability
 - Search and discovery
-- Customer opportunities and worker applications
+- Customer opportunities; direct first-successful acceptance for standard service jobs; team-up applications and organiser selection
 - In-app messaging and notifications
 - Ratings and completion workflows
 - Saved workers, portfolios and reporting
 
-Some product goals remain under development. In particular, automatic first-accept job dispatch, independent identity verification and production-grade realtime connection ownership checks must not be assumed to be complete.
+Some product goals remain under development. First-successful acceptance is wired for standard service jobs, but proximity-first push dispatch is not implemented. Independent identity verification and production-grade realtime connection ownership checks are also incomplete. Job completion uses per-participant confirmation records with consistent keyed reads; simultaneous confirmation tests are still required.
 
 ## Repository status
 
