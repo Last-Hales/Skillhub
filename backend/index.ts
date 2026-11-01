@@ -310,8 +310,7 @@ export const handler = router({
     requireAuth(),
     async ({ params, user }) => {
       const currentUser = user!;
-      const postPage = await db.list<{ ownerId: string }>('portfolioPosts', { limit: 300 });
-      const post = postPage.items.find(item => (item as typeof item & { id: string }).id === params.postId);
+      const [post] = await db.get<{ ownerId: string }>('portfolioPosts', [params.postId]);
       if (!post) return error('Portfolio post not found.', 404);
       const likeId = (params.postId + '_' + currentUser.userId).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 180);
       const existing = await db.get('portfolioLikes', [likeId]);
@@ -325,8 +324,8 @@ export const handler = router({
     async ({ params, body, user }) => {
       const currentUser = user!;
       const profile = await requireProfile(currentUser.userId);
-      const postPage = await db.list<{ ownerId: string }>('portfolioPosts', { limit: 300 });
-      if (!postPage.items.some(item => (item as typeof item & { id: string }).id === params.postId)) return error('Portfolio post not found.', 404);
+      const [post] = await db.get<{ ownerId: string }>('portfolioPosts', [params.postId]);
+      if (!post) return error('Portfolio post not found.', 404);
       const text = cleanText((body as Record<string, unknown> | null)?.text, 500);
       if (!text) return error('Write a comment first.', 400);
       const [id] = await db.add('portfolioComments', [{ postId: params.postId, userId: currentUser.userId, userName: profile.fullName, text, createdAt: new Date().toISOString() }]);
