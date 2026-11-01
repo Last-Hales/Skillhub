@@ -219,7 +219,7 @@ function App() {
       const page = response.data as Pick<Bootstrap, 'workers' | 'opportunities' | 'discoveryCursors'>;
       setData(current => {
         if (!current) return current;
-        const mergeById = <T extends { id: string }>(existing: T[], incoming: T[]) => {
+        const mergeById = <T extends { id: string },>(existing: T[], incoming: T[]) => {
           const merged = new Map(existing.map(item => [item.id, item]));
           incoming.forEach(item => merged.set(item.id, item));
           return [...merged.values()];
