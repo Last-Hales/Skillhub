@@ -120,6 +120,7 @@ type Bootstrap = {
   ratedJobIds?: string[];
   savedWorkerIds?: string[];
   portfolioPosts?: { id:string; ownerId:string; caption:string; imageUrl?:string; createdAt:string; likes:number; likedByMe:boolean; comments:{id:string;userId:string;userName:string;text:string;createdAt:string}[] }[];
+  discoveryCursors?: { profiles: string | null; opportunities: string | null };
 };
 
 const emptyProfile: Profile = {
@@ -169,6 +170,7 @@ function App() {
     teamSize: 3,
   });
   const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [loadingDiscoveryPage, setLoadingDiscoveryPage] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Opportunity | null>(null);
   const selectedJobRef = useRef<Opportunity | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -202,6 +204,39 @@ function App() {
       });
     setProfileMode(!next.profile);
   }, []);
+
+  async function loadMoreDiscovery() {
+    if (!data?.discoveryCursors || loadingDiscoveryPage) return;
+    const cursors = data.discoveryCursors;
+    if (!cursors.profiles && !cursors.opportunities) return;
+    setLoadingDiscoveryPage(true);
+    setErrorText('');
+    try {
+      const params = new URLSearchParams();
+      if (cursors.profiles) params.set('profilesNextToken', cursors.profiles);
+      if (cursors.opportunities) params.set('opportunitiesNextToken', cursors.opportunities);
+      const response = await api.get('/api/discovery-page?' + params.toString());
+      const page = response.data as Pick<Bootstrap, 'workers' | 'opportunities' | 'discoveryCursors'>;
+      setData(current => {
+        if (!current) return current;
+        const mergeById = <T extends { id: string }>(existing: T[], incoming: T[]) => {
+          const merged = new Map(existing.map(item => [item.id, item]));
+          incoming.forEach(item => merged.set(item.id, item));
+          return [...merged.values()];
+        };
+        return {
+          ...current,
+          workers: mergeById(current.workers, page.workers ?? []),
+          opportunities: mergeById(current.opportunities, page.opportunities ?? []),
+          discoveryCursors: page.discoveryCursors ?? current.discoveryCursors,
+        };
+      });
+    } catch (err) {
+      setErrorText(err instanceof Error ? err.message : 'Could not load more results.');
+    } finally {
+      setLoadingDiscoveryPage(false);
+    }
+  }
 
   useEffect(() => {
     selectedJobRef.current = selectedJob;
@@ -1288,6 +1323,13 @@ function App() {
                   </div>
                 )}
               </section>
+            )}
+            {((profile.role === 'customer' && data.discoveryCursors?.profiles) || (profile.role === 'worker' && data.discoveryCursors?.opportunities)) && (
+              <div className="load-more-row">
+                <button className="button button-outline" onClick={loadMoreDiscovery} disabled={loadingDiscoveryPage}>
+                  {loadingDiscoveryPage ? 'Loading…' : 'Load more results'}
+                </button>
+              </div>
             )}
             <div className="trust-note">
               <ShieldCheck size={17} />
