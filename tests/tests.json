@@ -75,7 +75,9 @@
     "covers": [
       "chat history pagination",
       "participant authorization",
-      "duplicate-free prepend"
+      "duplicate-free prepend",
+      "targeted read receipts",
+      "no global message-table scan"
     ],
     "description": "Verifies chat history is fetched in bounded pages and older messages can be appended without replacing the current conversation.",
     "steps": [
@@ -83,9 +85,12 @@
       "Confirm the first response contains at most 100 messages and a continuation token when more records remain",
       "Select Load older messages and confirm the next page is requested with the continuation token",
       "Confirm older messages appear before existing messages and duplicates are not shown",
-      "Attempt to open another user's conversation and confirm access is denied"
+      "Attempt to open another user's conversation and confirm access is denied",
+      "Load a chat page and confirm the client submits only the message IDs returned for that conversation when marking messages read",
+      "Load an older chat page and confirm its returned message IDs are also submitted for read receipts",
+      "Confirm the read endpoint rejects or ignores IDs belonging to another job and never marks the current user's own messages as read"
     ],
-    "expected": "Each request reads no more than 100 message records, returns a continuation token when available, and only authorized participants can retrieve chat history."
+    "expected": "Each request reads no more than 100 message records, returns a continuation token when available, and only authorized participants can retrieve chat history. Read receipts use authenticated, job-scoped keyed lookups for at most 100 client-supplied message IDs and do not scan a global first-200 message page."
   },
   {
     "name": "SkillHub brand assets render on landing, onboarding and installed icon",
