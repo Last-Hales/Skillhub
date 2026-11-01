@@ -91,3 +91,11 @@ The old admin setup included a hard-coded default credential. Treat that credent
 - The frontend now sends the message IDs returned by each fetched conversation page (maximum 100). The authenticated endpoint verifies the caller is a job participant, resolves those IDs with a bounded keyed `db.get`, and marks only unread incoming messages belonging to that job as read.
 - IDs from another job and the current user's own messages are ignored. This improves read-receipt correctness for loaded pages; it does not solve the separate global-cursor ordering/completeness limitation in chat history pagination.
 - Added QA steps for page-scoped read receipts. No build or AppDeploy QA execution has been performed yet.
+
+
+## Chat read-receipt lookup correction
+
+- The authenticated `POST /api/messages/:jobId/read` endpoint now accepts a bounded list of message IDs (maximum 100), verifies each keyed record belongs to the requested job and was sent by another participant, and updates only those records. It no longer scans the first 200 global message records, which could miss unread messages for older conversations.
+- Opening a conversation, refreshing it, and loading an older page now submit the IDs actually displayed on that page for read-receipt updates.
+- This corrects read-receipt targeting but does not solve global-table cursor ordering or guarantee that a cursor page contains the next chronologically older messages for a specific conversation. That remains an open chat-history design limitation.
+- Added QA coverage for cross-conversation ID rejection and bounded keyed read receipts. The scenario has not yet been executed in AppDeploy QA.
