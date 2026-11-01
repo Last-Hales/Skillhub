@@ -1511,6 +1511,13 @@ function App() {
                 </div>
               )}
             </div>
+            {data.myJobsCursors && (data.myJobsCursors.opportunities || data.myJobsCursors.applications) && (
+              <div className="load-more-row">
+                <button className="button button-outline" onClick={loadMoreMyJobs} disabled={loadingMyJobsPage}>
+                  {loadingMyJobsPage ? 'Loading…' : 'Load more of your jobs'}
+                </button>
+              </div>
+            )}
           </section>
         )}
 
