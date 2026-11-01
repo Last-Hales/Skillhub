@@ -1,5 +1,24 @@
 [
   {
+    "name": "Chat history uses bounded cursor pagination",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "chat history pagination",
+      "participant authorization",
+      "duplicate-free prepend"
+    ],
+    "description": "Verifies chat history is fetched in bounded pages and older messages can be appended without replacing the current conversation.",
+    "steps": [
+      "Open a conversation as one of its authorized participants",
+      "Confirm the first response contains at most 100 messages and a continuation token when more records remain",
+      "Select Load older messages and confirm the next page is requested with the continuation token",
+      "Confirm older messages appear before existing messages and duplicates are not shown",
+      "Attempt to open another user's conversation and confirm access is denied"
+    ],
+    "expected": "Each request reads no more than 100 message records, returns a continuation token when available, and only authorized participants can retrieve chat history."
+  },
+  {
     "name": "SkillHub brand assets render on landing, onboarding and installed icon",
     "sanity": true,
     "viewport": "mobile",
