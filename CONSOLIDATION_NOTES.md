@@ -83,3 +83,11 @@ The old admin setup included a hard-coded default credential. Treat that credent
 - The endpoint can collect up to 600 opportunity IDs (100 direct opportunity records plus up to 500 application-linked job IDs), so it now splits keyed opportunity reads into batches of at most 500, respecting the SDK array limit.
 - Worker profile lookups are also paired with their requested IDs by position. Applicant profile images backed by stored paths are resolved through the storage URL API before returning the page.
 - Added QA coverage for ID preservation, the 500-key batch limit, and applicant image URLs. These are test scenarios only; no build or AppDeploy QA execution has been performed yet.
+
+
+## Chat read-receipt lookup correction
+
+- The chat read endpoint no longer scans the first 200 records in the global messages table, which could miss unread messages for conversations outside that global page.
+- The frontend now sends the message IDs returned by each fetched conversation page (maximum 100). The authenticated endpoint verifies the caller is a job participant, resolves those IDs with a bounded keyed `db.get`, and marks only unread incoming messages belonging to that job as read.
+- IDs from another job and the current user's own messages are ignored. This improves read-receipt correctness for loaded pages; it does not solve the separate global-cursor ordering/completeness limitation in chat history pagination.
+- Added QA steps for page-scoped read receipts. No build or AppDeploy QA execution has been performed yet.
