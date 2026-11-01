@@ -804,7 +804,7 @@ export const handler = router({
       });
       if (unreadIds.length) {
         const deliveredAt = new Date().toISOString();
-        await db.tx.update('messages', unreadIds.map(id => ({ id, record: { readAt: deliveredAt }, if: { readAt: undefined } })), { patch: true });
+        await db.tx.update('messages', unreadIds.map(id => ({ id, record: { readAt: deliveredAt } })), { patch: true });
       }
       return json({ read: true, updated: unreadIds.length });
     },
