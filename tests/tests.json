@@ -8,7 +8,10 @@
       "authenticated job ownership",
       "worker application history",
       "duplicate-free append",
-      "bounded reads"
+      "bounded reads",
+      "keyed lookup ID preservation",
+      "database get batch limit",
+      "signed worker profile images"
     ],
     "description": "Verifies customers and workers can load older jobs and application-associated jobs beyond the initial bootstrap pages.",
     "steps": [
@@ -16,9 +19,12 @@
       "Load more of your jobs and confirm older owned opportunities appear without duplicates",
       "Sign in as a worker with applications beyond the initial 500 application records",
       "Load more of your jobs and confirm jobs referenced by later application pages appear",
-      "Attempt to request the endpoint without authentication and confirm access is denied"
+      "Attempt to request the endpoint without authentication and confirm access is denied",
+      "Use a page that contains application-linked jobs and verify each returned job retains the exact requested database ID even though keyed database reads return records without IDs",
+      "Exercise a result set requiring more than 500 keyed opportunity lookups and confirm requests are split into batches of no more than 500",
+      "Confirm applicant profile images backed by stored image paths resolve to usable signed URLs"
     ],
-    "expected": "Each request reads no more than 100 opportunity records and 500 application records, returns updated cursors, only includes jobs associated with the signed-in user, and appends unique job cards."
+    "expected": "Each request reads no more than 100 opportunity records and 500 application records, returns updated cursors, only includes jobs associated with the signed-in user, and appends unique job cards. Keyed reads preserve the requested IDs by positional pairing, split requests at the 500-key SDK limit, and resolve applicant profile images from stored paths."
   },
   {
     "name": "Discovery feeds load additional worker and opportunity pages",
