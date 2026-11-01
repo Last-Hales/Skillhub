@@ -198,11 +198,21 @@ export const handler = router({
       if (!profile) return error('Complete your profile before browsing SkillHub.', 400);
       const profileToken = cleanText(query.profilesNextToken, 2048);
       const opportunityToken = cleanText(query.opportunitiesNextToken, 2048);
+      // A missing cursor means that feed is exhausted. Do not restart it at page one.
+      // This keeps each click bounded to the feed that still has another page.
       const [profilesPage, jobsPage, ratingsPage, applicationsPage] = await Promise.all([
-        db.list<Profile>('profiles', { limit: 100, ...(profileToken ? { nextToken: profileToken } : {}) }),
-        db.list<Opportunity>('opportunities', { limit: 100, ...(opportunityToken ? { nextToken: opportunityToken } : {}) }),
-        db.list<{ targetId: string; score: number }>('ratings', { limit: 500 }),
-        db.list<Application>('applications', { limit: 500 }),
+        profileToken
+          ? db.list<Profile>('profiles', { limit: 100, nextToken: profileToken })
+          : Promise.resolve({ items: [], nextToken: undefined }),
+        opportunityToken
+          ? db.list<Opportunity>('opportunities', { limit: 100, nextToken: opportunityToken })
+          : Promise.resolve({ items: [], nextToken: undefined }),
+        profileToken
+          ? db.list<{ targetId: string; score: number }>('ratings', { limit: 500 })
+          : Promise.resolve({ items: [], nextToken: undefined }),
+        opportunityToken
+          ? db.list<Application>('applications', { limit: 500 })
+          : Promise.resolve({ items: [], nextToken: undefined }),
       ]);
       const imagePaths = [...new Set(profilesPage.items.map(item => item.profileImagePath).filter((path): path is string => Boolean(path)))];
       const imageUrls = imagePaths.length ? await storage.url(imagePaths) : [];
