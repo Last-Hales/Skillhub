@@ -75,3 +75,11 @@ The old admin setup included a hard-coded default credential. Treat that credent
 - The Opportunities screen now offers a Load more of your jobs control and appends records by job ID.
 - This is incremental bounded pagination, not an exhaustive one-shot scan. Applicant lists and worker rating summaries on a given job page are still constrained by the supporting application/rating pages read in that request; this remains a known completeness limitation until applicant data is separately paginated or fetched by targeted job query.
 - The new flow has not yet been exercised in AppDeploy QA or a full TypeScript build.
+
+
+## My Jobs keyed lookup correction
+
+- The AppDeploy database contract specifies that `db.get(table, ids)` returns records in the same order as requested IDs but does not attach database IDs to the returned records. The My Jobs page endpoint now pairs each record with its requested ID by array position instead of relying on a record `.id` field.
+- The endpoint can collect up to 600 opportunity IDs (100 direct opportunity records plus up to 500 application-linked job IDs), so it now splits keyed opportunity reads into batches of at most 500, respecting the SDK array limit.
+- Worker profile lookups are also paired with their requested IDs by position. Applicant profile images backed by stored paths are resolved through the storage URL API before returning the page.
+- Added QA coverage for ID preservation, the 500-key batch limit, and applicant image URLs. These are test scenarios only; no build or AppDeploy QA execution has been performed yet.
