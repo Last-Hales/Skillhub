@@ -1,5 +1,24 @@
 [
   {
+    "name": "Portfolio interactions find posts beyond the first feed page",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "portfolio direct record lookup",
+      "like permission path",
+      "comment permission path"
+    ],
+    "description": "Checks that a valid portfolio post can be liked or commented on even when it is not among the first 300 posts returned by the feed query.",
+    "steps": [
+      "Create or locate a portfolio post whose record ID is known",
+      "Like the post using its post ID",
+      "Add a comment using the same post ID",
+      "Confirm the like and comment are accepted for the existing post",
+      "Try an unknown post ID and confirm both routes return not found"
+    ],
+    "expected": "Like and comment routes resolve the target post directly by record ID rather than searching a fixed first-300-record page."
+  },
+  {
     "name": "Chat history uses bounded cursor pagination",
     "sanity": true,
     "viewport": "mobile",
