@@ -788,14 +788,25 @@ export const handler = router({
 
   'POST /api/messages/:jobId/read': [
     requireAuth(),
-    async ({ params, user }) => {
+    async ({ params, user, body }) => {
       const currentUser = user!;
       const job = await getOpportunity(params.jobId);
       if (!job || (![job.customerId, job.workerId, ...(job.workerIds ?? [])].filter(Boolean).includes(currentUser.userId))) return error('You do not have access to this conversation.', 403);
-      const page = await db.list<{ jobId: string; senderId: string; readAt?: string }>('messages', { limit: 200 });
-      const unread = page.items.filter(message => message.jobId === params.jobId && message.senderId !== currentUser.userId && !message.readAt);
-      if (unread.length) await db.tx.update('messages', unread.map(message => ({ id: (message as typeof message & { id: string }).id, record: { readAt: new Date().toISOString() } })), { patch: true });
-      return json({ read: true });
+      const input = (body ?? {}) as Record<string, unknown>;
+      const messageIds = Array.isArray(input.messageIds)
+        ? [...new Set(input.messageIds.filter((id): id is string => typeof id === 'string').map(id => cleanText(id, 200)).filter(Boolean))].slice(0, 100)
+        : [];
+      if (!messageIds.length) return json({ read: true, updated: 0 });
+      const records = await db.get<{ jobId: string; senderId: string; readAt?: string }>('messages', messageIds);
+      const unreadIds = messageIds.filter((id, index) => {
+        const message = records[index];
+        return Boolean(message && message.jobId === params.jobId && message.senderId !== currentUser.userId && !message.readAt);
+      });
+      if (unreadIds.length) {
+        const deliveredAt = new Date().toISOString();
+        await db.tx.update('messages', unreadIds.map(id => ({ id, record: { readAt: deliveredAt }, if: { readAt: undefined } })), { patch: true });
+      }
+      return json({ read: true, updated: unreadIds.length });
     },
   ],
 
