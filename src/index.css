@@ -2140,3 +2140,9 @@ a {
   }
 }
 
+
+.load-more-row {
+  display: flex;
+  justify-content: center;
+  padding: 22px 0 8px;
+}
