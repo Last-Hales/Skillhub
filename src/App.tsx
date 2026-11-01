@@ -612,7 +612,7 @@ function App() {
       const page = response.data as { messages: ChatMessage[]; nextToken?: string | null };
       setMessages(page.messages);
       setMessageNextToken(page.nextToken ?? null);
-      await api.post('/api/messages/' + encodeURIComponent(job.id) + '/read');
+      await api.post('/api/messages/' + encodeURIComponent(job.id) + '/read', { messageIds: page.messages.map(message => message.id) });
     } catch (err) {
       setMessages([]);
       setErrorText(
