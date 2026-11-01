@@ -78,24 +78,20 @@
       "duplicate-free prepend",
       "targeted read receipts",
       "no global message-table scan",
-      "targeted read receipts",
       "conversation-scoped message ID validation"
     ],
-    "description": "Verifies chat history is fetched in bounded pages and older messages can be appended without replacing the current conversation.",
+    "description": "Verifies message reads are bounded and authorized, while explicitly recording that global-table cursor pages do not yet guarantee chronological per-conversation history.",
     "steps": [
       "Open a conversation as one of its authorized participants",
       "Confirm the first response contains at most 100 messages and a continuation token when more records remain",
       "Select Load older messages and confirm the next page is requested with the continuation token",
-      "Confirm older messages appear before existing messages and duplicates are not shown",
+      "Confirm the returned page is merged without duplicate message IDs; do not assume the page is chronologically older because the database cursor currently traverses the global messages table",
       "Attempt to open another user's conversation and confirm access is denied",
       "Load a chat page and confirm the client submits only the message IDs returned for that conversation when marking messages read",
       "Load an older chat page and confirm its returned message IDs are also submitted for read receipts",
-      "Confirm the read endpoint rejects or ignores IDs belonging to another job and never marks the current user's own messages as read",
-      "Open a conversation with incoming messages and confirm the client submits only the loaded message IDs to the read-receipt endpoint",
-      "Submit a message ID belonging to a different conversation and confirm it is not marked read",
-      "Confirm the read-receipt endpoint performs keyed lookups only for supplied IDs and does not scan the global messages table"
+      "Confirm the read endpoint rejects or ignores IDs belonging to another job and never marks the current user's own messages as read"
     ],
-    "expected": "Each request reads no more than 100 message records, returns a continuation token when available, and only authorized participants can retrieve chat history. Read receipts use authenticated, job-scoped keyed lookups for at most 100 client-supplied message IDs and do not scan a global first-200 message page. Read receipts use keyed lookups for at most 100 supplied message IDs, verify each record belongs to the authorized conversation, and do not scan a fixed global messages page."
+    "expected": "Each request reads no more than 100 global message records, returns the database continuation token when available, and only authorized participants can retrieve chat history. Read receipts use authenticated, job-scoped keyed lookups for at most 100 client-supplied message IDs and do not scan a global first-200 message page. Chronological ordering and completeness for an individual conversation remain unverified until the database supports a conversation-scoped ordered query."
   },
   {
     "name": "SkillHub brand assets render on landing, onboarding and installed icon",
