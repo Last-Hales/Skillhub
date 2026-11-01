@@ -190,6 +190,85 @@ export const handler = router({
     },
   ],
 
+  'GET /api/my-jobs-page': [
+    requireAuth(),
+    async ({ user, query }) => {
+      const currentUser = user!;
+      const [profile] = await db.get<Profile>('profiles', [currentUser.userId]);
+      if (!profile) return error('Complete your profile before viewing jobs.', 400);
+      const opportunitiesToken = cleanText(query.opportunitiesNextToken, 2048);
+      const applicationsToken = cleanText(query.applicationsNextToken, 2048);
+      const [jobsPage, applicationsPage] = await Promise.all([
+        opportunitiesToken
+          ? db.list<Opportunity>('opportunities', { limit: 100, nextToken: opportunitiesToken })
+          : Promise.resolve({ items: [], nextToken: undefined }),
+        applicationsToken
+          ? db.list<Application>('applications', { limit: 100, nextToken: applicationsToken })
+          : Promise.resolve({ items: [], nextToken: undefined }),
+      ]);
+      const applicationJobIds = applicationsPage.items
+        .filter(app => app.workerId === currentUser.userId)
+        .map(app => app.jobId);
+      const directJobs = jobsPage.items.filter(job =>
+        job.customerId === currentUser.userId ||
+        job.workerId === currentUser.userId ||
+        (job.workerIds ?? []).includes(currentUser.userId)
+      );
+      const ids = [...new Set([
+        ...directJobs.map(job => (job as Opportunity & { id: string }).id),
+        ...applicationJobIds,
+      ])];
+      const fetchedJobs = ids.length ? await db.get<Opportunity>('opportunities', ids) : [];
+      const jobById = new Map(fetchedJobs.filter(Boolean).map(job => [(job as Opportunity & { id: string }).id, job]));
+      const currentApplications = applicationsPage.items;
+      const workerIds = [...new Set(currentApplications.filter(app => directJobs.some(job => (job as Opportunity & { id: string }).id === app.jobId) && app.workerId !== currentUser.userId).map(app => app.workerId))];
+      const [workerProfiles, ratingsPage] = await Promise.all([
+        workerIds.length ? db.get<Profile>('profiles', workerIds) : Promise.resolve([]),
+        db.list<{ targetId: string; score: number }>('ratings', { limit: 500 }),
+      ]);
+      const profileById = new Map(workerProfiles.filter(Boolean).map(worker => [(worker as Profile & { id: string }).id, worker]));
+      const ratings = ratingsPage.items;
+      const myJobs = ids.map(id => {
+        const job = jobById.get(id);
+        if (!job) return null;
+        const item = job as Opportunity & { id: string };
+        const ownApplication = currentApplications.find(app => app.jobId === id && app.workerId === currentUser.userId);
+        const applicants = item.customerId === currentUser.userId
+          ? currentApplications.filter(app => app.jobId === id).map(app => {
+              const worker = profileById.get(app.workerId);
+              const workerRatings = ratings.filter(rating => rating.targetId === app.workerId);
+              return {
+                ...app,
+                id: (app as Application & { id: string }).id,
+                workerSkills: worker?.skills ?? '',
+                workerState: worker?.state ?? '',
+                workerRating: workerRatings.length ? workerRatings.reduce((sum, rating) => sum + rating.score, 0) / workerRatings.length : 0,
+                workerRatingCount: workerRatings.length,
+                workerImage: worker?.profileImage,
+                workerVerified: worker?.verificationStatus === 'verified',
+              };
+            })
+          : undefined;
+        return {
+          ...job,
+          id,
+          ...(applicants ? { applicants } : {}),
+          ...(ownApplication ? { myApplicationStatus: ownApplication.status } : {}),
+          isOwner: item.customerId === currentUser.userId,
+          completionConfirmedBy: item.completionConfirmedBy ?? [],
+        };
+      }).filter((job): job is NonNullable<typeof job> => Boolean(job))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      return json({
+        myJobs,
+        myJobsCursors: {
+          opportunities: jobsPage.nextToken ?? null,
+          applications: applicationsPage.nextToken ?? null,
+        },
+      });
+    },
+  ],
+
   'GET /api/discovery-page': [
     requireAuth(),
     async ({ user, query }) => {
