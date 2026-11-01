@@ -121,6 +121,7 @@ type Bootstrap = {
   savedWorkerIds?: string[];
   portfolioPosts?: { id:string; ownerId:string; caption:string; imageUrl?:string; createdAt:string; likes:number; likedByMe:boolean; comments:{id:string;userId:string;userName:string;text:string;createdAt:string}[] }[];
   discoveryCursors?: { profiles: string | null; opportunities: string | null };
+  myJobsCursors?: { opportunities: string | null; applications: string | null };
 };
 
 const emptyProfile: Profile = {
@@ -171,6 +172,7 @@ function App() {
   });
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [loadingDiscoveryPage, setLoadingDiscoveryPage] = useState(false);
+  const [loadingMyJobsPage, setLoadingMyJobsPage] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Opportunity | null>(null);
   const selectedJobRef = useRef<Opportunity | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -235,6 +237,31 @@ function App() {
       setErrorText(err instanceof Error ? err.message : 'Could not load more results.');
     } finally {
       setLoadingDiscoveryPage(false);
+    }
+  }
+
+  async function loadMoreMyJobs() {
+    if (!data?.myJobsCursors || loadingMyJobsPage) return;
+    const cursors = data.myJobsCursors;
+    if (!cursors.opportunities && !cursors.applications) return;
+    setLoadingMyJobsPage(true);
+    setErrorText('');
+    try {
+      const params = new URLSearchParams();
+      if (cursors.opportunities) params.set('opportunitiesNextToken', cursors.opportunities);
+      if (cursors.applications) params.set('applicationsNextToken', cursors.applications);
+      const response = await api.get('/api/my-jobs-page?' + params.toString());
+      const page = response.data as Pick<Bootstrap, 'myJobs' | 'myJobsCursors'>;
+      setData(current => {
+        if (!current) return current;
+        const merged = new Map((current.myJobs ?? []).map(job => [job.id, job]));
+        (page.myJobs ?? []).forEach(job => merged.set(job.id, { ...merged.get(job.id), ...job }));
+        return { ...current, myJobs: [...merged.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), myJobsCursors: page.myJobsCursors ?? current.myJobsCursors };
+      });
+    } catch (err) {
+      setErrorText(err instanceof Error ? err.message : 'Could not load more of your jobs.');
+    } finally {
+      setLoadingMyJobsPage(false);
     }
   }
 
