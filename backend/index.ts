@@ -207,7 +207,7 @@ export const handler = router({
           ? db.list<Opportunity>('opportunities', { limit: 100, nextToken: opportunitiesToken })
           : Promise.resolve({ items: [], nextToken: undefined }),
         applicationsToken
-          ? db.list<Application>('applications', { limit: 100, nextToken: applicationsToken })
+          ? db.list<Application>('applications', { limit: 500, nextToken: applicationsToken })
           : Promise.resolve({ items: [], nextToken: undefined }),
       ]);
       const applicationJobIds = applicationsPage.items
