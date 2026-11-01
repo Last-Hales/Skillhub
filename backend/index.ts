@@ -725,7 +725,7 @@ export const handler = router({
         confirmedAt: new Date().toISOString(),
       }]);
       if (!confirmation) {
-        const existing = await db.get('completionConfirmations', [confirmationId]);
+        const existing = await db.get('completionConfirmations', [confirmationId], { consistent: true });
         if (!existing[0]) return error('Could not record your completion confirmation.', 500);
       }
       const confirmationIds = required.map(id =>
