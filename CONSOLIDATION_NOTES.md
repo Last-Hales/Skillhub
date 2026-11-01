@@ -66,3 +66,12 @@ The old admin setup included a hard-coded default credential. Treat that credent
 
 - The discovery-page endpoint now treats a missing feed cursor as an exhausted feed instead of restarting that table at page one. It only reads profiles/ratings when a profile cursor is supplied, and opportunities/applications when an opportunity cursor is supplied. This avoids duplicate first-page reads when one feed has ended while the other still has results.
 - The page limits remain 100 profiles, 100 opportunities, and up to 500 supporting ratings/applications for the relevant feed. The fixed supporting-data limits remain a completeness caveat.
+
+
+## My Jobs pagination update
+
+- The authenticated bootstrap now returns separate continuation tokens for the opportunities and applications collections used by My Jobs.
+- The authenticated `GET /api/my-jobs-page` endpoint advances only supplied cursors, reads at most 100 opportunity records and 500 application records per request, and uses keyed opportunity/profile lookups for records discovered through the application page.
+- The Opportunities screen now offers a Load more of your jobs control and appends records by job ID.
+- This is incremental bounded pagination, not an exhaustive one-shot scan. Applicant lists and worker rating summaries on a given job page are still constrained by the supporting application/rating pages read in that request; this remains a known completeness limitation until applicant data is separately paginated or fetched by targeted job query.
+- The new flow has not yet been exercised in AppDeploy QA or a full TypeScript build.
