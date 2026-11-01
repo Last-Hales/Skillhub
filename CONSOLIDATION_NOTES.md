@@ -51,3 +51,12 @@ The old admin setup included a hard-coded default credential. Treat that credent
 6. Run the AppDeploy QA suite and an independent production build/test workflow.
 7. Confirm the proximity-first, first-accept dispatch behavior if it remains a product requirement.
 8. Only then review and merge the consolidation branch.
+
+
+## Discovery pagination update
+
+- The authenticated bootstrap response now includes continuation tokens for the profiles and opportunities tables after its initial bounded 100-record pages.
+- The authenticated `GET /api/discovery-page` endpoint accepts those tokens and reads at most 100 profile records and 100 opportunity records per request. It returns updated tokens with the next batch.
+- The Discover screen now offers a Load more results control when the relevant table has another page. Results are appended by record ID to avoid duplicate cards, and the existing client-side skill/location search runs across all pages loaded in the session.
+- Pagination is incremental; the backend does not drain the tables in one request. This branch has not yet been exercised in AppDeploy QA.
+- Remaining bounded-list caveats: ratings and applications are still read from fixed-size pages (500) for worker rating summaries and already-applied opportunity filtering. Saved-worker IDs and other bootstrap collections also retain their existing fixed limits. These require separate deliberate pagination or targeted lookups before large-scale completeness can be claimed.
