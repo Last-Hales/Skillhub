@@ -172,6 +172,8 @@ function App() {
   const [selectedJob, setSelectedJob] = useState<Opportunity | null>(null);
   const selectedJobRef = useRef<Opportunity | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messageNextToken, setMessageNextToken] = useState<string | null>(null);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const socketRef = useRef<ReturnType<typeof ws.connect> | null>(null);
   const subscribedJobRef = useRef<string | null>(null);
   const [messageText, setMessageText] = useState('');
@@ -535,10 +537,10 @@ function App() {
     setActiveTab('messages');
     setErrorText('');
     try {
-      const response = await api.get(
-        '/api/messages/' + encodeURIComponent(job.id)
-      );
-      setMessages((response.data as { messages: ChatMessage[] }).messages);
+      const response = await api.get('/api/messages/' + encodeURIComponent(job.id));
+      const page = response.data as { messages: ChatMessage[]; nextToken?: string | null };
+      setMessages(page.messages);
+      setMessageNextToken(page.nextToken ?? null);
       await api.post('/api/messages/' + encodeURIComponent(job.id) + '/read');
     } catch (err) {
       setMessages([]);
@@ -551,15 +553,32 @@ function App() {
   async function reloadMessages() {
     if (!selectedJob) return;
     try {
-      const response = await api.get(
-        '/api/messages/' + encodeURIComponent(selectedJob.id)
-      );
-      setMessages((response.data as { messages: ChatMessage[] }).messages);
+      const response = await api.get('/api/messages/' + encodeURIComponent(selectedJob.id));
+      const page = response.data as { messages: ChatMessage[]; nextToken?: string | null };
+      setMessages(page.messages);
+      setMessageNextToken(page.nextToken ?? null);
       await api.post('/api/messages/' + encodeURIComponent(selectedJob.id) + '/read');
     } catch (err) {
       setErrorText(
         err instanceof Error ? err.message : 'Could not refresh messages.'
       );
+    }
+  }
+
+  async function loadOlderMessages() {
+    if (!selectedJob || !messageNextToken || loadingOlderMessages) return;
+    setLoadingOlderMessages(true);
+    try {
+      const response = await api.get(
+        '/api/messages/' + encodeURIComponent(selectedJob.id) + '?nextToken=' + encodeURIComponent(messageNextToken)
+      );
+      const page = response.data as { messages: ChatMessage[]; nextToken?: string | null };
+      setMessages(current => [...page.messages, ...current.filter(item => !page.messages.some(older => older.id === item.id))]);
+      setMessageNextToken(page.nextToken ?? null);
+    } catch (err) {
+      setErrorText(err instanceof Error ? err.message : 'Could not load older messages.');
+    } finally {
+      setLoadingOlderMessages(false);
     }
   }
 
@@ -1489,6 +1508,11 @@ function App() {
                     <span className="live-status"><i /> Live chat</span>
                   </div>
                   <div className="messages-area">
+                    {messageNextToken && (
+                      <button type="button" className="secondary-button" onClick={loadOlderMessages} disabled={loadingOlderMessages}>
+                        {loadingOlderMessages ? 'Loading…' : 'Load older messages'}
+                      </button>
+                    )}
                     {messages.map(message => (
                       <div
                         key={message.id}
