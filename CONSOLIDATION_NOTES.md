@@ -60,3 +60,9 @@ The old admin setup included a hard-coded default credential. Treat that credent
 - The Discover screen now offers a Load more results control when the relevant table has another page. Results are appended by record ID to avoid duplicate cards, and the existing client-side skill/location search runs across all pages loaded in the session.
 - Pagination is incremental; the backend does not drain the tables in one request. This branch has not yet been exercised in AppDeploy QA.
 - Remaining bounded-list caveats: ratings and applications are still read from fixed-size pages (500) for worker rating summaries and already-applied opportunity filtering. Saved-worker IDs and other bootstrap collections also retain their existing fixed limits. These require separate deliberate pagination or targeted lookups before large-scale completeness can be claimed.
+
+
+## Discovery pagination efficiency fix
+
+- The discovery-page endpoint now treats a missing feed cursor as an exhausted feed instead of restarting that table at page one. It only reads profiles/ratings when a profile cursor is supplied, and opportunities/applications when an opportunity cursor is supplied. This avoids duplicate first-page reads when one feed has ended while the other still has results.
+- The page limits remain 100 profiles, 100 opportunities, and up to 500 supporting ratings/applications for the relevant feed. The fixed supporting-data limits remain a completeness caveat.
