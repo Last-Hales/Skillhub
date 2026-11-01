@@ -182,6 +182,10 @@ export const handler = router({
         ratedJobIds,
         savedWorkerIds,
         portfolioPosts,
+        discoveryCursors: {
+          profiles: profilesPage.nextToken ?? null,
+          opportunities: jobsPage.nextToken ?? null,
+        },
       });
     },
   ],
