@@ -1,5 +1,26 @@
 [
   {
+    "name": "My Jobs loads additional opportunity and application pages",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "My Jobs cursor pagination",
+      "authenticated job ownership",
+      "worker application history",
+      "duplicate-free append",
+      "bounded reads"
+    ],
+    "description": "Verifies customers and workers can load older jobs and application-associated jobs beyond the initial bootstrap pages.",
+    "steps": [
+      "Sign in as a customer with more than 100 posted opportunities and open Opportunities",
+      "Load more of your jobs and confirm older owned opportunities appear without duplicates",
+      "Sign in as a worker with applications beyond the initial 500 application records",
+      "Load more of your jobs and confirm jobs referenced by later application pages appear",
+      "Attempt to request the endpoint without authentication and confirm access is denied"
+    ],
+    "expected": "Each request reads no more than 100 opportunity records and 500 application records, returns updated cursors, only includes jobs associated with the signed-in user, and appends unique job cards."
+  },
+  {
     "name": "Discovery feeds load additional worker and opportunity pages",
     "sanity": true,
     "viewport": "mobile",
