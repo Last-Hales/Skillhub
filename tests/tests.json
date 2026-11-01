@@ -1,5 +1,23 @@
 [
   {
+    "name": "SkillHub brand assets render on landing, onboarding and installed icon",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "logo asset loading",
+      "favicon metadata",
+      "manifest icon"
+    ],
+    "description": "Checks that the uploaded SkillHub logo and favicon are wired to the public app shell and install manifest.",
+    "steps": [
+      "Open the signed-out landing page and confirm the SkillHub logo appears without a broken-image indicator",
+      "Open the sign-up/onboarding screen and confirm the same logo appears",
+      "Sign in and confirm the sidebar logo appears without cropping the full image",
+      "Inspect the browser tab icon and web app manifest icon path"
+    ],
+    "expected": "The logo loads from /resources/skillhub-logo.jpg in all three UI locations, while the browser and manifest icons resolve to /resources/favicon.jpg."
+  },
+  {
     "name": "Sign in, complete profile, upload avatar and use the installed app",
     "sanity": true,
     "viewport": "mobile",
