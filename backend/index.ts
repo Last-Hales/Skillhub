@@ -186,6 +186,10 @@ export const handler = router({
           profiles: profilesPage.nextToken ?? null,
           opportunities: jobsPage.nextToken ?? null,
         },
+        myJobsCursors: {
+          opportunities: jobsPage.nextToken ?? null,
+          applications: applicationsPage.nextToken ?? null,
+        },
       });
     },
   ],
