@@ -585,7 +585,7 @@ export const handler = router({
 
   'GET /api/messages/:jobId': [
     requireAuth(),
-    async ({ params, user }) => {
+    async ({ params, query, user }) => {
       const currentUser = user!;
       const job = await getOpportunity(params.jobId);
       if (!job) return error('Job conversation not found.', 404);
@@ -594,17 +594,19 @@ export const handler = router({
       ) {
         return error('You do not have access to this conversation.', 403);
       }
+      const requestedToken = cleanText(query.nextToken, 2048);
       const page = await db.list<{
         jobId: string; senderId: string; senderName: string; text: string; createdAt: string;
         deliveredAt?: string; readAt?: string;
-      }>('messages', { limit: 100 });
+      }>('messages', { limit: 100, ...(requestedToken ? { nextToken: requestedToken } : {}) });
       const incoming = page.items.filter(message => message.jobId === params.jobId && message.senderId !== currentUser.userId && !message.deliveredAt);
-      if (incoming.length) await db.tx.update('messages', incoming.map(message => ({ id: (message as typeof message & { id: string }).id, record: { deliveredAt: new Date().toISOString() }, if: { deliveredAt: null } })), { patch: true });
+      const deliveredAt = new Date().toISOString();
+      if (incoming.length) await db.tx.update('messages', incoming.map(message => ({ id: (message as typeof message & { id: string }).id, record: { deliveredAt }, if: { deliveredAt: null } })), { patch: true });
       const messages = page.items
         .filter(message => message.jobId === params.jobId)
-        .map(message => ({ ...message, id: message.id, ...(incoming.some(item => item.id === message.id) ? { deliveredAt: new Date().toISOString() } : {}) }))
+        .map(message => ({ ...message, id: message.id, ...(incoming.some(item => item.id === message.id) ? { deliveredAt } : {}) }))
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-      return json({ messages });
+      return json({ messages, nextToken: page.nextToken ?? null });
     },
   ],
 
