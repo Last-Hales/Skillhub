@@ -2163,3 +2163,33 @@ a {
   .rating-target-row { align-items: flex-start; flex-direction: column; }
   .rating-target-row .rating-stars { margin-left: 0; }
 }
+
+
+.verification-review-panel {
+  margin-top: 1.25rem;
+  padding: 1.1rem;
+  border: 1px solid var(--border, #263449);
+  border-radius: 16px;
+  background: var(--surface, #101b2b);
+}
+.verification-review-panel .muted-copy {
+  color: var(--muted, #9aa8ba);
+  font-size: .9rem;
+  line-height: 1.5;
+}
+.verification-review-item {
+  display: grid;
+  gap: .75rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--border, #263449);
+}
+.verification-review-item p,
+.verification-review-item small {
+  display: block;
+  margin: .25rem 0;
+  color: var(--muted, #9aa8ba);
+}
+.verification-review-item textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
