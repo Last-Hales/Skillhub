@@ -92,3 +92,13 @@ The old admin setup included a hard-coded default credential. Treat that credent
 ## Chat pagination QA correction
 
 - The chat pagination test does not assert that a global-table cursor page is necessarily older than the current conversation page. It verifies duplicate-free merging while explicitly preserving the chronological ordering/completeness limitation.
+
+
+## Applicant-index architecture decision
+
+- The preferred long-term design is a job-scoped applicant index so an applicant panel can page through one opportunity without scanning the global applications collection.
+- The reviewed AppDeploy database contract supports bounded `db.list` pages and chosen physical IDs, but its `filter` is explicitly post-read and does not reduce read cost. A filtered page over the global applications table therefore is not an efficient or completeness-safe substitute for a job-scoped index.
+- The contract also states that missing table catalogs must be created separately before application writes. The available AppDeploy tools and reviewed SDK reference do not expose or document that catalog-provisioning operation. Do not dynamically invent per-job table names and begin writing to them until the supported catalog workflow is confirmed.
+- A single shared index table would still require scanning its global pages because the documented filter is post-read. Storing an unbounded applicant-ID array on each opportunity is also unsuitable because records have a 256 KiB limit and concurrent array read-modify-write updates can lose applicants.
+- Therefore no applicant-index code has been added yet. This is an intentional safety stop, not a completed fix. Next required platform confirmation: how to provision a job-scoped partition/table (or an indexed query keyed by `jobId`) before any migration or write-path change.
+- Once the storage primitive is confirmed, implement idempotent index writes alongside application creation, status synchronization for choose/cancel/team flows, a paginated owner-only applicant endpoint, and a migration/backfill plan for legacy application rows. Preserve the existing global applications records during rollout; do not switch reads until reconciliation proves the index complete.
