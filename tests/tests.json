@@ -180,16 +180,22 @@
       "completion notification",
       "ratings after completion",
       "one-time rating enforcement",
-      "rating option hidden after submission"
+      "rating option hidden after submission",
+      "idempotent participant confirmation records",
+      "simultaneous confirmation safety",
+      "keyed confirmation hydration in My Jobs"
     ],
     "description": "Verifies a job is not completed until all required participants confirm and each user can rate only once.",
     "steps": [
       "Actor A and Actor B open an accepted job",
       "Actor A confirms completion and refreshes Jobs",
+      "Confirm the backend stores one uniquely keyed completion confirmation per participant and does not append to a shared participant array",
+      "Submit both participants' confirmations concurrently and verify neither confirmation is lost",
+      "Refresh My Jobs and verify each participant sees their own confirmation state from the keyed confirmation record",
       "Actor B confirms completion",
       "Actor A submits a rating and returns to the job history"
     ],
-    "expected": "The job stays in progress after the first confirmation, changes to Completed after the second, and the rating control disappears for Actor A after submission."
+    "expected": "Each participant has one idempotent keyed confirmation record. The job stays in progress after only one participant confirms, becomes Completed once all required participants have confirmed (including concurrent confirmations), and My Jobs correctly shows the signed-in participant's confirmation state after refresh. Each user can rate only once."
   },
   {
     "name": "Saved workers, job cancellation and permission guardrails",
