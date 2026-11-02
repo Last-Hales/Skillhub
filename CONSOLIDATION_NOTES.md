@@ -114,3 +114,11 @@ The old admin setup included a hard-coded default credential. Treat that credent
 - Backfill legacy applications with a bounded cursor worker: checkpoint the global applications cursor, write idempotent index rows, and reconcile counts/statuses before switching reads. Do not drain the global table in a request or repeatedly rescan it. Keep legacy reads available until reconciliation succeeds.
 - Required tests: applications beyond the first 500 global rows remain visible; multiple pages contain no duplicates or omissions; concurrent duplicate apply is idempotent; choose/cancel updates the index; non-owners cannot read applicants; backfill can resume from a checkpoint.
 - Blocking confirmation requested from AppDeploy: the supported catalog-provisioning API/process, whether table catalogs can be provisioned dynamically per opportunity, and whether provisioned tables are available immediately to backend transactions. No supported operation is currently exposed in the available toolset, so implementation must wait for that confirmation.
+
+
+## Team-Up selection atomicity correction
+
+- Team-Up selection previously updated the opportunity's worker list first and the selected application status in a separate write. If the second write failed or raced with another update, the worker could be added to the team while their application remained `applied`.
+- The selection path now composes the opportunity update and selected application conditional status update into one `db.transact` call. Both commit or neither commits; a failed condition returns a conflict response.
+- Added a QA scenario for the atomic selection behavior. The scenario is defined but has not been executed.
+- Remaining limitations: applicant discovery still reads only the first 500 global application records, so a valid application outside that page may not be selectable. Team membership updates can still race when multiple owners' requests use the same stale `workerIds` snapshot while the opportunity remains open; concurrency testing and a compare-and-set condition on the membership snapshot are still required. This change fixes the partial two-record write, not the broader team concurrency or applicant pagination problems.
