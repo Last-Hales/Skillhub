@@ -168,6 +168,18 @@ export const handler = router({
         })
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+      const acceptedMyJobs = myJobs.filter(job => job.status === 'accepted');
+      const ownCompletionIds = acceptedMyJobs.map(job => (job.id + '_' + currentUser.userId).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 180));
+      if (ownCompletionIds.length) {
+        const ownConfirmations = await db.get<{ jobId: string; userId: string }>('completionConfirmations', ownCompletionIds, { consistent: true });
+        acceptedMyJobs.forEach((job, index) => {
+          const confirmation = ownConfirmations[index];
+          if (confirmation?.jobId === job.id && confirmation.userId === currentUser.userId) {
+            job.completionConfirmedBy = [...new Set([...(job.completionConfirmedBy ?? []), currentUser.userId])];
+          }
+        });
+      }
+
       return json({
         user: {
           userId: currentUser.userId,
