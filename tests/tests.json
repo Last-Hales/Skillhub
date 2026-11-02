@@ -223,7 +223,10 @@
     "covers": [
       "team selection transaction",
       "application status consistency",
-      "conditional update conflict handling"
+      "conditional update conflict handling",
+      "team membership compare-and-set",
+      "concurrent additions do not lose worker IDs",
+      "team capacity after retry"
     ],
     "description": "Verifies the Team-Up opportunity and selected application cannot be left in conflicting states when a selection races with another update.",
     "steps": [
@@ -231,9 +234,14 @@
       "As the team owner, select that worker",
       "Verify the opportunity's workerIds includes the selected worker and the selected application status is accepted",
       "Simulate a concurrent change that makes the application no longer applied before the selection transaction commits",
-      "Verify the transaction does not add the worker to the team when the application update condition fails"
+      "Verify the transaction does not add the worker to the team when the application update condition fails",
+      "Start with a Team-Up that has one member and room for two more workers",
+      "Race two applicant selections based on the same workerIds snapshot",
+      "Verify only one transaction commits, the other application remains applied, and no selected worker is lost",
+      "Refresh the Team-Up and retry the second selection against the new membership snapshot",
+      "Verify the final workerIds list contains each accepted worker exactly once and does not exceed teamSize"
     ],
-    "expected": "The opportunity update and selected application status update commit together or neither is applied. A conditional conflict returns a refresh-and-retry response."
+    "expected": "The opportunity update and selected application status commit together. The opportunity patch compares both open status and the exact workerIds snapshot. Concurrent selections based on the same snapshot cannot overwrite each other: one commits, the other conflicts without accepting its application, and a refreshed retry can safely add the next worker without duplicates or exceeding teamSize."
   },
   {
     "name": "Realtime subscriptions remain complete beyond global table page limits",
