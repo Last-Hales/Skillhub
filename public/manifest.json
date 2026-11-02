@@ -1,0 +1,17 @@
+{
+  "name": "SkillHub",
+  "short_name": "SkillHub",
+  "description": "Connecting people to trusted skilled workers.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#1769d5",
+  "icons": [
+    {
+      "src": "/resources/favicon.jpg",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

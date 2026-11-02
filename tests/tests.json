@@ -1,0 +1,348 @@
+[
+  {
+    "name": "My Jobs loads additional opportunity and application pages",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "My Jobs cursor pagination",
+      "authenticated job ownership",
+      "worker application history",
+      "duplicate-free append",
+      "bounded reads",
+      "keyed lookup ID preservation",
+      "database get batch limit",
+      "signed worker profile images"
+    ],
+    "description": "Verifies customers and workers can load older jobs and application-associated jobs beyond the initial bootstrap pages.",
+    "steps": [
+      "Sign in as a customer with more than 100 posted opportunities and open Opportunities",
+      "Load more of your jobs and confirm older owned opportunities appear without duplicates",
+      "Sign in as a worker with applications beyond the initial 500 application records",
+      "Load more of your jobs and confirm jobs referenced by later application pages appear",
+      "Attempt to request the endpoint without authentication and confirm access is denied",
+      "Use a page that contains application-linked jobs and verify each returned job retains the exact requested database ID even though keyed database reads return records without IDs",
+      "Exercise a result set requiring more than 500 keyed opportunity lookups and confirm requests are split into batches of no more than 500",
+      "Confirm applicant profile images backed by stored image paths resolve to usable signed URLs"
+    ],
+    "expected": "Each request reads no more than 100 opportunity records and 500 application records, returns updated cursors, only includes jobs associated with the signed-in user, and appends unique job cards. Keyed reads preserve the requested IDs by positional pairing, split requests at the 500-key SDK limit, and resolve applicant profile images from stored paths."
+  },
+  {
+    "name": "Discovery feeds load additional worker and opportunity pages",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "worker discovery cursor",
+      "opportunity discovery cursor",
+      "bounded database reads",
+      "duplicate-free append",
+      "search across loaded pages"
+    ],
+    "description": "Verifies discovery starts with bounded pages and can append further results using continuation tokens.",
+    "steps": [
+      "Sign in as a customer and open Discover",
+      "Confirm the initial worker feed is limited to one page and Load more results appears when a continuation token exists",
+      "Select Load more results and confirm the next worker page is appended",
+      "Search for a worker from the newly loaded page and confirm the search finds that worker",
+      "Sign in as a worker and repeat the flow for open opportunities",
+      "Load another page and confirm previously shown jobs are not duplicated",
+      "When one feed has no continuation token but the other still does, load another page and confirm the exhausted feed is not fetched again from its first page."
+    ],
+    "expected": "Each discovery request reads at most 100 profiles and 100 opportunities, advances the relevant continuation token, appends unique records, and keeps search functional across all loaded results. A feed with a null cursor is treated as exhausted and is not restarted or reread."
+  },
+  {
+    "name": "Portfolio interactions find posts beyond the first feed page",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "portfolio direct record lookup",
+      "like permission path",
+      "comment permission path"
+    ],
+    "description": "Checks that a valid portfolio post can be liked or commented on even when it is not among the first 300 posts returned by the feed query.",
+    "steps": [
+      "Create or locate a portfolio post whose record ID is known",
+      "Like the post using its post ID",
+      "Add a comment using the same post ID",
+      "Confirm the like and comment are accepted for the existing post",
+      "Try an unknown post ID and confirm both routes return not found"
+    ],
+    "expected": "Like and comment routes resolve the target post directly by record ID rather than searching a fixed first-300-record page."
+  },
+  {
+    "name": "Chat history uses bounded cursor pagination",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "chat history pagination",
+      "participant authorization",
+      "duplicate-free prepend",
+      "targeted read receipts",
+      "no global message-table scan",
+      "conversation-scoped message ID validation"
+    ],
+    "description": "Verifies message reads are bounded and authorized, while explicitly recording that global-table cursor pages do not yet guarantee chronological per-conversation history.",
+    "steps": [
+      "Open a conversation as one of its authorized participants",
+      "Confirm the first response contains at most 100 messages and a continuation token when more records remain",
+      "Select Load older messages and confirm the next page is requested with the continuation token",
+      "Confirm the returned page is merged without duplicate message IDs; do not assume the page is chronologically older because the database cursor currently traverses the global messages table",
+      "Attempt to open another user's conversation and confirm access is denied",
+      "Load a chat page and confirm the client submits only the message IDs returned for that conversation when marking messages read",
+      "Load an older chat page and confirm its returned message IDs are also submitted for read receipts",
+      "Confirm the read endpoint rejects or ignores IDs belonging to another job and never marks the current user's own messages as read"
+    ],
+    "expected": "Each request reads no more than 100 global message records, returns the database continuation token when available, and only authorized participants can retrieve chat history. Read receipts use authenticated, job-scoped keyed lookups for at most 100 client-supplied message IDs and do not scan a global first-200 message page. Chronological ordering and completeness for an individual conversation remain unverified until the database supports a conversation-scoped ordered query."
+  },
+  {
+    "name": "SkillHub brand assets render on landing, onboarding and installed icon",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "logo asset loading",
+      "favicon metadata",
+      "manifest icon"
+    ],
+    "description": "Checks that the uploaded SkillHub logo and favicon are wired to the public app shell and install manifest.",
+    "steps": [
+      "Open the signed-out landing page and confirm the SkillHub logo appears without a broken-image indicator",
+      "Open the sign-up/onboarding screen and confirm the same logo appears",
+      "Sign in and confirm the sidebar logo appears without cropping the full image",
+      "Inspect the browser tab icon and web app manifest icon path"
+    ],
+    "expected": "The logo loads from /resources/skillhub-logo.jpg in all three UI locations, while the browser and manifest icons resolve to /resources/favicon.jpg."
+  },
+  {
+    "name": "Sign in, complete profile, upload avatar and use the installed app",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "sign-in and role onboarding",
+      "profile picture storage and display",
+      "portfolio link",
+      "hexagon SkillHub installation icon",
+      "bottom navigation and dark mode"
+    ],
+    "description": "Verifies a new user can create a profile, upload an image, save a portfolio link and navigate the mobile app.",
+    "steps": [
+      "Sign in as a new user and choose Worker",
+      "Complete the required profile fields and add a portfolio link",
+      "Upload a JPG profile photo and save the profile",
+      "Switch dark mode on and use the bottom navigation"
+    ],
+    "expected": "The profile photo and portfolio are visible after reload, the dark theme is applied and the mobile navigation remains usable."
+  },
+  {
+    "name": "Customer posts a job, chooses an applicant, chats and both sides can report",
+    "viewport": "desktop",
+    "covers": [
+      "customer job creation",
+      "worker application workflow",
+      "applicant ratings and profile details",
+      "customer worker selection",
+      "live WebSocket chat and message receipts",
+      "job reports by both participants"
+    ],
+    "description": "Verifies the normal job flow from posting through selection and conversation, including reports from both sides.",
+    "steps": [
+      "Actor A signs in as a customer and posts a job",
+      "Actor B signs in as an available worker and applies",
+      "Actor A reviews the applicant profile and selects Actor B",
+      "Exchange messages and confirm the recipient sees them live",
+      "Actor A and Actor B each submit a report for the job"
+    ],
+    "expected": "The selected worker is assigned, the chat is limited to the two participants, message receipt indicators update and both reports are accepted."
+  },
+  {
+    "name": "Worker creates a Team-Up and builds a multi-worker team",
+    "viewport": "desktop",
+    "covers": [
+      "worker Team-Up creation",
+      "team size and project details",
+      "multiple worker applications",
+      "team leader applicant selection",
+      "group chat access",
+      "team leader reputation"
+    ],
+    "description": "Verifies a worker can post a collaboration request, accept several applicants and coordinate a team.",
+    "steps": [
+      "Actor A signs in as a worker and creates a Team-Up requiring two additional workers",
+      "Actors B and C sign in as workers and apply",
+      "Actor A adds both workers to the team",
+      "Actor A, B and C open the Team-Up conversation and exchange messages"
+    ],
+    "expected": "The Team-Up remains open until the requested number of workers is selected, then becomes in progress and all selected members can access the group chat."
+  },
+  {
+    "name": "Require mutual completion and one rating per participant pair",
+    "viewport": "desktop",
+    "covers": [
+      "two-party completion confirmation",
+      "completion notification",
+      "ratings after completion",
+      "one rating per job and recipient",
+      "legacy rating compatibility",
+      "per-participant Team-Up rating controls",
+      "idempotent participant confirmation records",
+      "simultaneous confirmation safety",
+      "keyed confirmation hydration in My Jobs"
+    ],
+    "description": "Verifies completion requires all participants and each participant can rate every other eligible participant once per completed job.",
+    "steps": [
+      "Actor A and Actor B open an accepted job",
+      "Actor A confirms completion and refreshes Jobs",
+      "Confirm the backend stores one uniquely keyed completion confirmation per participant and does not append to a shared participant array",
+      "Submit both participants' confirmations concurrently and verify neither confirmation is lost",
+      "Refresh My Jobs and verify each participant sees their own confirmation state from the keyed confirmation record",
+      "Actor B confirms completion",
+      "Actor A rates Actor B, then rates Actor C in a Team-Up, and verifies a repeat rating for Actor B is rejected"
+    ],
+    "expected": "Each participant has one idempotent keyed confirmation record. The job stays in progress after only one participant confirms, becomes Completed once all required participants have confirmed (including concurrent confirmations), and My Jobs correctly shows the signed-in participant's confirmation state after refresh. A rater can submit one rating per eligible recipient, separate Team-Up members can each be rated, duplicate recipient ratings are rejected, and pre-existing legacy ratings still block a repeat for their original recipient."
+  },
+  {
+    "name": "Saved workers, job cancellation and permission guardrails",
+    "viewport": "mobile",
+    "covers": [
+      "save and unsave workers",
+      "saved worker filtering",
+      "job cancellation and history",
+      "role-based permissions",
+      "duplicate application prevention",
+      "participant-only reporting"
+    ],
+    "description": "Verifies saved professionals persist and users cannot perform job actions outside their permissions.",
+    "steps": [
+      "Sign in as a customer and save a worker profile",
+      "Open Saved workers and verify the worker appears",
+      "Remove the worker from Saved workers",
+      "Sign in as a worker and attempt to delete another customer’s job or report a job they did not participate in"
+    ],
+    "expected": "Saved workers can be added and removed, and unauthorized deletion or reporting is blocked with a clear message."
+  },
+  {
+    "name": "Team selection atomically assigns the worker and accepts the application",
+    "viewport": "desktop",
+    "covers": [
+      "team selection transaction",
+      "application status consistency",
+      "conditional update conflict handling",
+      "team membership compare-and-set",
+      "concurrent additions do not lose worker IDs",
+      "team capacity after retry"
+    ],
+    "description": "Verifies the Team-Up opportunity and selected application cannot be left in conflicting states when a selection races with another update.",
+    "steps": [
+      "Create an open Team-Up and submit an application from a worker",
+      "As the team owner, select that worker",
+      "Verify the opportunity's workerIds includes the selected worker and the selected application status is accepted",
+      "Simulate a concurrent change that makes the application no longer applied before the selection transaction commits",
+      "Verify the transaction does not add the worker to the team when the application update condition fails",
+      "Start with a Team-Up that has one member and room for two more workers",
+      "Race two applicant selections based on the same workerIds snapshot",
+      "Verify only one transaction commits, the other application remains applied, and no selected worker is lost",
+      "Refresh the Team-Up and retry the second selection against the new membership snapshot",
+      "Verify the final workerIds list contains each accepted worker exactly once and does not exceed teamSize"
+    ],
+    "expected": "The opportunity update and selected application status commit together. The opportunity patch compares both open status and the exact workerIds snapshot. Concurrent selections based on the same snapshot cannot overwrite each other: one commits, the other conflicts without accepting its application, and a refreshed retry can safely add the next worker without duplicates or exceeding teamSize."
+  },
+  {
+    "name": "Realtime subscriptions remain complete beyond global table page limits",
+    "viewport": "desktop",
+    "covers": [
+      "subscription pagination",
+      "entity-scoped fan-out",
+      "idempotent subscription creation",
+      "connection ownership verification",
+      "authorized unsubscribe and cleanup"
+    ],
+    "description": "Tracks release-blocking realtime scale and connection-ownership requirements. The current implementation is expected to fail the scale and ownership checks until the documented platform dependencies are resolved.",
+    "steps": [
+      "Create more than 1,000 subscriptions across multiple job conversations",
+      "Subscribe a valid participant to a conversation whose subscription record is beyond the first global 1,000 records",
+      "Send a message and verify every active participant in that conversation receives the entity.update event",
+      "Repeat the same subscribe request and verify it does not create duplicate subscription records",
+      "Attempt to subscribe using a connection ID issued to a different authenticated user and verify server/platform ownership validation rejects it",
+      "Unsubscribe and disconnect one participant and verify only that participant's subscription records are removed"
+    ],
+    "expected": "Notification fan-out reaches all and only active subscribers for the target conversation without scanning the entire growing global table. Repeated subscriptions are idempotent, unsubscribe and disconnect cleanup are scoped to the authenticated connection owner, and connection IDs cannot be spoofed across users. Current code has a 1,000-row global read cap and no documented server-side connection ownership verification, so this scenario is a known release blocker and has not been executed."
+  },
+  {
+    "name": "Application creation is atomic with opportunity cancellation",
+    "viewport": "desktop",
+    "covers": [
+      "apply-cancel race",
+      "conditional open-state guard",
+      "stable application ID",
+      "duplicate application prevention",
+      "bounded cancellation status synchronization"
+    ],
+    "description": "Verifies the apply operation cannot create an application after cancellation has won the opportunity status race, and records the remaining global-page limitation in cancellation cleanup.",
+    "steps": [
+      "Create an open opportunity and sign in as an available worker with a matching skill",
+      "Race the worker apply request against the owner's cancellation request",
+      "When cancellation commits first, verify the application transaction aborts and no application row is created",
+      "When application creation commits first, verify cancellation can proceed without allowing any later application to be created",
+      "Repeat the same worker's apply request and verify the stable application ID prevents a duplicate",
+      "Use a cancelled opportunity with more than 500 historical applications and verify the test detects any application statuses beyond the first global page that remain applied"
+    ],
+    "expected": "The application insert and open-status condition commit atomically. Cancellation winning first prevents the application row; application creation winning first remains a valid pre-cancellation application. Repeated applies do not create duplicate rows. The test separately reports that cancellation currently updates only applications found in its first 500-record global page, so later application statuses may remain stale."
+  },
+  {
+    "name": "Team-Up cannot bypass organiser selection through direct job acceptance",
+    "viewport": "mobile",
+    "covers": [
+      "Team-Up application flow",
+      "role and route enforcement",
+      "organiser-controlled team membership"
+    ],
+    "description": "Verifies a worker cannot use the single-worker accept endpoint to bypass the Team-Up application and organiser-selection workflow.",
+    "steps": [
+      "Create a Team-Up opportunity as a worker",
+      "As another available worker, call the direct /api/opportunities/:id/accept endpoint for that Team-Up",
+      "Confirm the endpoint rejects the request with a conflict response and does not change status, workerId or workerIds",
+      "Submit an application through the Team-Up apply endpoint",
+      "As the organiser, choose the applicant and confirm the normal Team-Up selection flow still works"
+    ],
+    "expected": "The direct accept route rejects Team-Up opportunities without modifying them. Team membership can only be changed through the Team-Up application and organiser-selection flow. This scenario is defined but has not been executed."
+  },
+  {
+    "name": "Team-Up organiser cannot apply to their own opportunity",
+    "viewport": "mobile",
+    "covers": [
+      "Team-Up ownership",
+      "self-application prevention",
+      "organiser-controlled team membership"
+    ],
+    "description": "Verifies the worker who created a Team-Up cannot consume a team slot by applying to their own post.",
+    "steps": [
+      "Sign in as a worker and create a Team-Up opportunity",
+      "As the same worker, submit an application to that opportunity",
+      "Confirm the apply endpoint rejects the request with a forbidden response",
+      "Confirm no application record is created and the Team-Up remains open with unchanged membership",
+      "As a different available worker with a matching skill, apply and confirm the organiser can still select that worker"
+    ],
+    "expected": "The Team-Up creator cannot apply to their own opportunity. The endpoint returns 403 before creating an application, while applications from other eligible workers continue through the normal organiser-selection flow."
+  },
+  {
+    "name": "Identity verification is reviewed only by allowlisted reviewers",
+    "viewport": "mobile",
+    "covers": [
+      "reviewer allowlist",
+      "atomic verification submission",
+      "approve and reject decisions",
+      "audit metadata",
+      "user notification"
+    ],
+    "description": "Checks that users can submit verification requests but cannot review them, while an allowlisted reviewer can approve or reject each pending request exactly once.",
+    "steps": [
+      "Sign in as a customer or worker and request identity verification",
+      "Confirm the profile changes to pending and one matching request is created",
+      "Attempt to load the review queue and submit a review as a non-reviewer",
+      "Confirm both reviewer endpoints reject the non-reviewer with 403",
+      "Sign in with an email included in the server-side reviewer allowlist and load the pending queue",
+      "Approve one request and confirm the profile becomes verified, the request records reviewer and timestamp, and the user receives a notification",
+      "Attempt to review the same request again and confirm the endpoint rejects the duplicate",
+      "Reject another pending request and confirm the profile returns to none and the user receives a notification"
+    ],
+    "expected": "Verification submission is recoverable and consistent; only server-allowlisted reviewers can access the queue or decide requests; each decision updates the request and profile atomically and records audit metadata."
+  }
+]
