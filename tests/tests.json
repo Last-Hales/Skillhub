@@ -284,5 +284,23 @@
       "Use a cancelled opportunity with more than 500 historical applications and verify the test detects any application statuses beyond the first global page that remain applied"
     ],
     "expected": "The application insert and open-status condition commit atomically. Cancellation winning first prevents the application row; application creation winning first remains a valid pre-cancellation application. Repeated applies do not create duplicate rows. The test separately reports that cancellation currently updates only applications found in its first 500-record global page, so later application statuses may remain stale."
+  },
+  {
+    "name": "Team-Up cannot bypass organiser selection through direct job acceptance",
+    "viewport": "mobile",
+    "covers": [
+      "Team-Up application flow",
+      "role and route enforcement",
+      "organiser-controlled team membership"
+    ],
+    "description": "Verifies a worker cannot use the single-worker accept endpoint to bypass the Team-Up application and organiser-selection workflow.",
+    "steps": [
+      "Create a Team-Up opportunity as a worker",
+      "As another available worker, call the direct /api/opportunities/:id/accept endpoint for that Team-Up",
+      "Confirm the endpoint rejects the request with a conflict response and does not change status, workerId or workerIds",
+      "Submit an application through the Team-Up apply endpoint",
+      "As the organiser, choose the applicant and confirm the normal Team-Up selection flow still works"
+    ],
+    "expected": "The direct accept route rejects Team-Up opportunities without modifying them. Team membership can only be changed through the Team-Up application and organiser-selection flow. This scenario is defined but has not been executed."
   }
 ]
