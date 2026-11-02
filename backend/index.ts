@@ -633,7 +633,7 @@ export const handler = router({
 
   'GET /api/messages/:jobId': [
     requireAuth(),
-    async ({ params, user }) => {
+    async ({ params, query, user }) => {
       const currentUser = user!;
       const job = await getOpportunity(params.jobId);
       if (!job) return error('Job conversation not found.', 404);
@@ -645,27 +645,42 @@ export const handler = router({
       const page = await db.list<{
         jobId: string; senderId: string; senderName: string; text: string; createdAt: string;
         deliveredAt?: string; readAt?: string;
-      }>('messages', { limit: 100 });
+      }>('messages', { limit: 100, ...(query.nextToken ? { nextToken: query.nextToken } : {}) });
       const incoming = page.items.filter(message => message.jobId === params.jobId && message.senderId !== currentUser.userId && !message.deliveredAt);
-      if (incoming.length) await db.tx.update('messages', incoming.map(message => ({ id: (message as typeof message & { id: string }).id, record: { deliveredAt: new Date().toISOString() }, if: { deliveredAt: null } })), { patch: true });
+      const deliveredAt = new Date().toISOString();
+      if (incoming.length) await db.tx.update('messages', incoming.map(message => ({
+        id: message.id,
+        record: { deliveredAt },
+        if: { jobId: params.jobId, senderId: message.senderId, deliveredAt: undefined },
+      })), { patch: true });
       const messages = page.items
         .filter(message => message.jobId === params.jobId)
-        .map(message => ({ ...message, id: message.id, ...(incoming.some(item => item.id === message.id) ? { deliveredAt: new Date().toISOString() } : {}) }))
+        .map(message => ({ ...message, id: message.id, ...(incoming.some(item => item.id === message.id) ? { deliveredAt } : {}) }))
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-      return json({ messages });
+      return json({ messages, nextToken: page.nextToken ?? null });
     },
   ],
 
   'POST /api/messages/:jobId/read': [
     requireAuth(),
-    async ({ params, user }) => {
+    async ({ params, body, user }) => {
       const currentUser = user!;
       const job = await getOpportunity(params.jobId);
       if (!job || (![job.customerId, job.workerId, ...(job.workerIds ?? [])].filter(Boolean).includes(currentUser.userId))) return error('You do not have access to this conversation.', 403);
-      const page = await db.list<{ jobId: string; senderId: string; readAt?: string }>('messages', { limit: 200 });
-      const unread = page.items.filter(message => message.jobId === params.jobId && message.senderId !== currentUser.userId && !message.readAt);
-      if (unread.length) await db.tx.update('messages', unread.map(message => ({ id: (message as typeof message & { id: string }).id, record: { readAt: new Date().toISOString() } })), { patch: true });
-      return json({ read: true });
+      const input = (body ?? {}) as Record<string, unknown>;
+      const requestedIds = Array.isArray(input.messageIds)
+        ? [...new Set(input.messageIds.map(id => cleanText(id, 200)).filter(Boolean))].slice(0, 100)
+        : [];
+      if (!requestedIds.length) return json({ read: true, updated: 0 });
+      const records = await db.get<{ jobId: string; senderId: string; readAt?: string }>('messages', requestedIds, { consistent: true });
+      const readAt = new Date().toISOString();
+      const updates = records.flatMap((message, index) =>
+        message && message.jobId === params.jobId && message.senderId !== currentUser.userId && !message.readAt
+          ? [{ id: requestedIds[index], record: { readAt }, if: { jobId: params.jobId, senderId: message.senderId, readAt: undefined } }]
+          : []
+      );
+      if (updates.length) await db.tx.update('messages', updates, { patch: true });
+      return json({ read: true, updated: updates.length });
     },
   ],
 
