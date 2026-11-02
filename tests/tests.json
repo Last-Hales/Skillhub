@@ -255,5 +255,26 @@
       "Unsubscribe and disconnect one participant and verify only that participant's subscription records are removed"
     ],
     "expected": "Notification fan-out reaches all and only active subscribers for the target conversation without scanning the entire growing global table. Repeated subscriptions are idempotent, unsubscribe and disconnect cleanup are scoped to the authenticated connection owner, and connection IDs cannot be spoofed across users. Current code has a 1,000-row global read cap and no documented server-side connection ownership verification, so this scenario is a known release blocker and has not been executed."
+  },
+  {
+    "name": "Application creation is atomic with opportunity cancellation",
+    "viewport": "desktop",
+    "covers": [
+      "apply-cancel race",
+      "conditional open-state guard",
+      "stable application ID",
+      "duplicate application prevention",
+      "bounded cancellation status synchronization"
+    ],
+    "description": "Verifies the apply operation cannot create an application after cancellation has won the opportunity status race, and records the remaining global-page limitation in cancellation cleanup.",
+    "steps": [
+      "Create an open opportunity and sign in as an available worker with a matching skill",
+      "Race the worker apply request against the owner's cancellation request",
+      "When cancellation commits first, verify the application transaction aborts and no application row is created",
+      "When application creation commits first, verify cancellation can proceed without allowing any later application to be created",
+      "Repeat the same worker's apply request and verify the stable application ID prevents a duplicate",
+      "Use a cancelled opportunity with more than 500 historical applications and verify the test detects any application statuses beyond the first global page that remain applied"
+    ],
+    "expected": "The application insert and open-status condition commit atomically. Cancellation winning first prevents the application row; application creation winning first remains a valid pre-cancellation application. Repeated applies do not create duplicate rows. The test separately reports that cancellation currently updates only applications found in its first 500-record global page, so later application statuses may remain stale."
   }
 ]
