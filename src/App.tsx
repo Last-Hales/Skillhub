@@ -897,7 +897,7 @@ function App() {
             SkillHub <span className="footer-dot">●</span> Built for skills,
             powered by people.
           </span>
-          <span>Support: skill.hub.gtt@gmail.com</span>
+          <span>Support: skill.hub.ght@gmail.com</span>
         </footer>
       </main>
     );
@@ -1092,7 +1092,7 @@ function App() {
             <CircleHelp size={18} />
             <b>Need a hand?</b>
             <p>Contact the SkillHub team.</p>
-            <a href="mailto:skill.hub.gtt@gmail.com">Email support ↗</a>
+            <a href="mailto:skill.hub.ght@gmail.com">Email support ↗</a>
             <a
               href="https://wa.me/2349015210112"
               target="_blank"
@@ -1837,7 +1837,7 @@ function App() {
             people.
           </span>
           <span className="support-links">
-            <a href="mailto:skill.hub.gtt@gmail.com" aria-label="Email SkillHub support"><Mail size={17} /> Email support</a>
+            <a href="mailto:skill.hub.ght@gmail.com" aria-label="Email SkillHub support"><Mail size={17} /> Email support</a>
             <a href="https://wa.me/2349015210112" target="_blank" rel="noreferrer" aria-label="WhatsApp SkillHub support"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 11.7a8.2 8.2 0 0 1-12.1 7.2L3 20l1.2-4.8A8.2 8.2 0 1 1 20.2 11.7Z"/><path d="M8.6 8.1c.2-.4.4-.5.7-.5h.5c.2 0 .3.1.4.4l.7 1.6c.1.2.1.4-.1.6l-.5.6c-.2.2-.2.3-.1.5.5.9 1.2 1.6 2.1 2.1.2.1.3.1.5-.1l.7-.8c.2-.2.3-.2.6-.1l1.5.7c.2.1.3.3.3.5 0 .4-.2 1-.6 1.3-.4.4-1 .6-1.6.5-1.1-.2-2.4-.8-3.7-2-1.1-1.1-1.9-2.5-2-3.4-.1-.7.2-1.4.6-1.9Z"/></svg> WhatsApp</a>
           </span>
         </footer>
