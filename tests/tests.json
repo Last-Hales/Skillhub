@@ -303,5 +303,23 @@
       "As the organiser, choose the applicant and confirm the normal Team-Up selection flow still works"
     ],
     "expected": "The direct accept route rejects Team-Up opportunities without modifying them. Team membership can only be changed through the Team-Up application and organiser-selection flow. This scenario is defined but has not been executed."
+  },
+  {
+    "name": "Team-Up organiser cannot apply to their own opportunity",
+    "viewport": "mobile",
+    "covers": [
+      "Team-Up ownership",
+      "self-application prevention",
+      "organiser-controlled team membership"
+    ],
+    "description": "Verifies the worker who created a Team-Up cannot consume a team slot by applying to their own post.",
+    "steps": [
+      "Sign in as a worker and create a Team-Up opportunity",
+      "As the same worker, submit an application to that opportunity",
+      "Confirm the apply endpoint rejects the request with a forbidden response",
+      "Confirm no application record is created and the Team-Up remains open with unchanged membership",
+      "As a different available worker with a matching skill, apply and confirm the organiser can still select that worker"
+    ],
+    "expected": "The Team-Up creator cannot apply to their own opportunity. The endpoint returns 403 before creating an application, while applications from other eligible workers continue through the normal organiser-selection flow."
   }
 ]
