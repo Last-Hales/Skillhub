@@ -1,4 +1,4 @@
-import { router, json, error, db, requireAuth, storage } from '@appdeploy/sdk';
+import { router, json, error, db, requireAuth, storage, secrets } from '@appdeploy/sdk';
 import { notifySubscribers, realtimeSubscriptionRoutes } from './realtime-subscribers';
 
 type Profile = {
@@ -16,6 +16,7 @@ type Profile = {
   profileImagePath?: string;
   portfolio?: string;
   verificationStatus?: 'none' | 'pending' | 'verified';
+  verificationRequestId?: string;
 };
 
 type Application = {
@@ -56,6 +57,20 @@ async function requireProfile(userId: string) {
   const profile = await getProfile(userId);
   if (!profile) throw new Error('PROFILE_REQUIRED');
   return profile;
+}
+
+
+async function isVerificationReviewer(email?: string) {
+  if (!email) return false;
+  try {
+    const allowlist = (await secrets.readSecret('SKILLHUB_VERIFICATION_REVIEWER_EMAILS'))
+      .split(',')
+      .map(value => value.trim().toLowerCase())
+      .filter(Boolean);
+    return allowlist.includes(email.toLowerCase());
+  } catch {
+    return false;
+  }
 }
 
 async function getOpportunity(id: string) {
@@ -182,7 +197,9 @@ export const handler = router({
         });
       }
 
+      const verificationReviewer = await isVerificationReviewer(currentUser.email);
       return json({
+        isVerificationReviewer: verificationReviewer,
         user: {
           userId: currentUser.userId,
           email: currentUser.email,
@@ -295,9 +312,93 @@ export const handler = router({
       const currentUser = user!;
       const profile = await requireProfile(currentUser.userId);
       if (profile.verificationStatus === 'verified') return error('This profile is already verified.', 409);
-      await db.tx.update('profiles', [{ id: currentUser.userId, record: { verificationStatus: 'pending' } }], { patch: true });
-      await db.add('verificationRequests', [{ userId: currentUser.userId, fullName: profile.fullName, role: profile.role, method: 'external_identity_provider_required', createdAt: new Date().toISOString(), status: 'pending' }]);
-      return json({ submitted: true, status: 'pending' });
+      if (profile.verificationStatus === 'pending') return json({ submitted: true, status: 'pending', requestId: profile.verificationRequestId ?? null });
+      const requestId = ('vr_' + currentUser.userId + '_' + Date.now()).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 180);
+      const createdAt = new Date().toISOString();
+      const requestWrite = db.tx.add('verificationRequests', [{
+        id: requestId, userId: currentUser.userId, fullName: profile.fullName, role: profile.role,
+        email: currentUser.email ?? profile.email, method: 'external_identity_provider_required',
+        createdAt, status: 'pending',
+      }]);
+      const profileWrite = db.tx.update('profiles', [{
+        id: currentUser.userId,
+        record: { verificationStatus: 'pending', verificationRequestId: requestId },
+        if: { verificationStatus: profile.verificationStatus ?? undefined },
+      }], { patch: true });
+      try {
+        const [requestIds, profileUpdated] = await db.transact([requestWrite, profileWrite]);
+        if (!requestIds[0] || !profileUpdated[0]) return error('Could not submit your verification request. Refresh and try again.', 409);
+      } catch {
+        const [latest] = await db.get<Profile>('profiles', [currentUser.userId], { consistent: true });
+        if (latest?.verificationStatus === 'pending') return json({ submitted: true, status: 'pending', requestId: latest.verificationRequestId ?? null });
+        return error('Could not submit your verification request. Please try again.', 500);
+      }
+      return json({ submitted: true, status: 'pending', requestId });
+    },
+  ],
+
+  'GET /api/admin/verification-requests': [
+    requireAuth(),
+    async ({ query, user }) => {
+      const currentUser = user!;
+      if (!(await isVerificationReviewer(currentUser.email))) return error('Verification reviewer access required.', 403);
+      const page = await db.list<{
+        userId: string; fullName: string; role: string; email?: string; method: string;
+        createdAt: string; status: string; reviewedAt?: string; reviewerEmail?: string;
+      }>('verificationRequests', { limit: 100, ...(query.nextToken ? { nextToken: query.nextToken } : {}) });
+      return json({
+        requests: page.items.filter(item => item.status === 'pending'),
+        nextToken: page.nextToken ?? null,
+      });
+    },
+  ],
+
+  'POST /api/admin/verification-requests/:id/review': [
+    requireAuth(),
+    async ({ params, body, user }) => {
+      const currentUser = user!;
+      if (!(await isVerificationReviewer(currentUser.email))) return error('Verification reviewer access required.', 403);
+      const input = (body ?? {}) as Record<string, unknown>;
+      const decision = input.decision === 'approve' ? 'approved' : input.decision === 'reject' ? 'rejected' : null;
+      if (!decision) return error('Choose approve or reject.', 400);
+      const note = cleanText(input.note, 500);
+      const [request] = await db.get<{
+        userId: string; status: string; fullName: string; role: string;
+      }>('verificationRequests', [params.id], { consistent: true });
+      if (!request) return error('Verification request not found.', 404);
+      if (request.status !== 'pending') return error('This request has already been reviewed.', 409);
+      const [profile] = await db.get<Profile>('profiles', [request.userId], { consistent: true });
+      if (!profile || profile.verificationStatus !== 'pending') return error('The profile is no longer awaiting verification.', 409);
+      const reviewedAt = new Date().toISOString();
+      const requestWrite = db.tx.update('verificationRequests', [{
+        id: params.id,
+        record: { status: decision, reviewerEmail: currentUser.email ?? '', reviewedAt, reviewNote: note },
+        if: { status: 'pending' },
+      }], { patch: true });
+      const profileWrite = db.tx.update('profiles', [{
+        id: request.userId,
+        record: {
+          verificationStatus: decision === 'approved' ? 'verified' : 'none',
+          verificationRequestId: undefined,
+        },
+        if: { verificationStatus: 'pending' },
+      }], { patch: true });
+      try {
+        const [requestUpdated, profileUpdated] = await db.transact([requestWrite, profileWrite]);
+        if (!requestUpdated[0] || !profileUpdated[0]) return error('This request changed while being reviewed. Refresh and try again.', 409);
+      } catch {
+        return error('This request changed while being reviewed. Refresh and try again.', 409);
+      }
+      await db.add('notifications', [{
+        userId: request.userId,
+        title: decision === 'approved' ? 'Identity verification approved' : 'Identity verification needs attention',
+        body: decision === 'approved'
+          ? 'Your SkillHub identity verification has been approved.'
+          : 'Your SkillHub identity verification was not approved. You can submit a new request after reviewing the requirements.',
+        read: false,
+        createdAt: reviewedAt,
+      }]);
+      return json({ reviewed: true, status: decision });
     },
   ],
 
