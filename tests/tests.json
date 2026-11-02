@@ -321,5 +321,28 @@
       "As a different available worker with a matching skill, apply and confirm the organiser can still select that worker"
     ],
     "expected": "The Team-Up creator cannot apply to their own opportunity. The endpoint returns 403 before creating an application, while applications from other eligible workers continue through the normal organiser-selection flow."
+  },
+  {
+    "name": "Identity verification is reviewed only by allowlisted reviewers",
+    "viewport": "mobile",
+    "covers": [
+      "reviewer allowlist",
+      "atomic verification submission",
+      "approve and reject decisions",
+      "audit metadata",
+      "user notification"
+    ],
+    "description": "Checks that users can submit verification requests but cannot review them, while an allowlisted reviewer can approve or reject each pending request exactly once.",
+    "steps": [
+      "Sign in as a customer or worker and request identity verification",
+      "Confirm the profile changes to pending and one matching request is created",
+      "Attempt to load the review queue and submit a review as a non-reviewer",
+      "Confirm both reviewer endpoints reject the non-reviewer with 403",
+      "Sign in with an email included in the server-side reviewer allowlist and load the pending queue",
+      "Approve one request and confirm the profile becomes verified, the request records reviewer and timestamp, and the user receives a notification",
+      "Attempt to review the same request again and confirm the endpoint rejects the duplicate",
+      "Reject another pending request and confirm the profile returns to none and the user receives a notification"
+    ],
+    "expected": "Verification submission is recoverable and consistent; only server-allowlisted reviewers can access the queue or decide requests; each decision updates the request and profile atomically and records audit metadata."
   }
 ]
