@@ -118,6 +118,7 @@ type Bootstrap = {
   myJobs: Opportunity[];
   notifications?: { id: string; title: string; body: string; createdAt: string; read: boolean }[];
   ratedJobIds?: string[];
+  ratedParticipantKeys?: string[];
   savedWorkerIds?: string[];
   portfolioPosts?: { id:string; ownerId:string; caption:string; imageUrl?:string; createdAt:string; likes:number; likedByMe:boolean; comments:{id:string;userId:string;userName:string;text:string;createdAt:string}[] }[];
   discoveryCursors?: { profiles: string | null; opportunities: string | null };
@@ -1445,8 +1446,15 @@ function App() {
                         Confirm completion
                       </button>
                     )}
-                    {job.status === 'completed' && !(data.ratedJobIds ?? []).includes(job.id) && (
-                      <button className="button button-outline" onClick={() => { setSelectedJob(job); setRating(5); }}>Rate job <Star size={14} /></button>
+                    {job.status === 'completed' && (() => {
+                      const targets = (job.kind === 'team'
+                        ? [job.customerId, ...(job.workerIds ?? [])]
+                        : [profile.role === 'customer' ? job.workerId : job.customerId])
+                        .filter((id): id is string => Boolean(id) && id !== user.userId);
+                      const rated = data.ratedParticipantKeys ?? [];
+                      return targets.some(id => !rated.includes(job.id + ':' + id));
+                    })() && (
+                      <button className="button button-outline" onClick={() => { setSelectedJob(job); setRating(5); }}>Rate participants <Star size={14} /></button>
                     )}
                     {job.status === 'accepted' && (job.completionConfirmedBy ?? []).includes(user.userId) && <span className="completion-waiting">Waiting for other party to confirm</span>}
                     {(job.isOwner || job.workerId === user.userId || (job.workerIds ?? []).includes(user.userId)) && <button className="button button-outline button-small" onClick={() => { setSelectedJob(job); setShowReportForm(true); }}><ShieldAlert size={14} /> Report job</button>}
@@ -1464,43 +1472,45 @@ function App() {
                       {(job.applicants ?? []).length === 0 && <p className="empty-mini">No applications yet. Workers will appear here after they apply.</p>}
                     </div>
                   )}
-                  {job.status === 'completed' && selectedJob?.id === job.id && !(data.ratedJobIds ?? []).includes(job.id) && (
+                  {job.status === 'completed' && selectedJob?.id === job.id && (
                     <div className="rating-panel">
-                      <b>How was your experience?</b>
-                      <div className="rating-stars">
-                        {[1, 2, 3, 4, 5].map(value => (
-                          <button
-                            key={value}
-                            className={
-                              rating >= value
-                                ? 'star-button selected'
-                                : 'star-button'
-                            }
-                            onClick={() => setRating(value)}
-                            aria-label={'Rate ' + value + ' stars'}
-                          >
-                            <Star size={22} fill="currentColor" />
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        className="button button-primary"
-                        onClick={() =>
-                          submitRating(
-                            job,
-                            job.isOwner && job.kind === 'team'
-                              ? (job.workerIds?.[0] ?? job.workerId ?? '')
-                              : profile.role === 'customer'
-                                ? (job.workerId ?? '')
-                                : job.customerId
-                          )
-                        }
-                        disabled={
-                          busy || (profile.role === 'customer' && !job.workerId)
-                        }
-                      >
-                        Submit rating
-                      </button>
+                      <b>Rate each participant</b>
+                      {(job.kind === 'team'
+                        ? [job.customerId, ...(job.workerIds ?? [])]
+                        : [profile.role === 'customer' ? job.workerId : job.customerId])
+                        .filter((targetId): targetId is string => Boolean(targetId) && targetId !== user.userId)
+                        .map(targetId => {
+                          const alreadyRated = (data.ratedParticipantKeys ?? []).includes(job.id + ':' + targetId);
+                          const targetName = targetId === job.customerId
+                            ? job.customerName
+                            : job.applicants?.find(applicant => applicant.workerId === targetId)?.workerName
+                              ?? data.workers.find(worker => worker.id === targetId)?.fullName
+                              ?? 'Team member';
+                          return (
+                            <div className="rating-target-row" key={targetId}>
+                              <b>{targetName}</b>
+                              {alreadyRated ? <span className="completion-waiting">Rated</span> : (
+                                <>
+                                  <div className="rating-stars">
+                                    {[1, 2, 3, 4, 5].map(value => (
+                                      <button key={value} type="button"
+                                        className={rating >= value ? 'star-button selected' : 'star-button'}
+                                        onClick={() => setRating(value)}
+                                        aria-label={'Rate ' + value + ' stars'}>
+                                        <Star size={22} fill="currentColor" />
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <button className="button button-primary"
+                                    onClick={() => submitRating(job, targetId)}
+                                    disabled={busy}>
+                                    Submit rating
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
                     </div>
                   )}
                 </article>
