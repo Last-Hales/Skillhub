@@ -418,10 +418,45 @@ export const handler = router({
         return error('Your listed skills do not appear to match this job. Update your profile if needed.', 400);
       }
       const applicationId = (params.id + '_' + currentUser.userId).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 180);
-      const [id] = await db.tx.add('applications', [{ id: applicationId, jobId: params.id, workerId: currentUser.userId, workerName: profile.fullName, status: 'applied', createdAt: new Date().toISOString() }]);
-      if (!id) return error('You have already applied for this job.', 409);
-      await db.add('notifications', [{ userId: job.customerId, title: 'New worker application', body: profile.fullName + ' applied for ' + job.skill, jobId: params.id, read: false, createdAt: new Date().toISOString() }]);
-      return json({ applied: true, id });
+      const applicationWrite = db.tx.add('applications', [{
+        id: applicationId,
+        jobId: params.id,
+        workerId: currentUser.userId,
+        workerName: profile.fullName,
+        status: 'applied',
+        createdAt: new Date().toISOString(),
+      }]);
+      // Couple application creation to the job's open-state condition. This closes
+      // the race where cancellation commits after the initial read but before apply.
+      const openJobGuard = db.tx.update('opportunities', [{
+        id: params.id,
+        record: { status: 'open' },
+        if: { status: 'open' },
+      }], { patch: true });
+      try {
+        const [applicationIds] = await db.transact([applicationWrite, openJobGuard]);
+        const id = applicationIds[0];
+        if (!id) return error('You have already applied for this job.', 409);
+        await db.add('notifications', [{
+          userId: job.customerId,
+          title: 'New worker application',
+          body: profile.fullName + ' applied for ' + job.skill,
+          jobId: params.id,
+          read: false,
+          createdAt: new Date().toISOString(),
+        }]);
+        return json({ applied: true, id });
+      } catch (err: unknown) {
+        // A duplicate chosen ID aborts the transaction; verify the existing row
+        // before classifying it as an ordinary duplicate application.
+        const [existing] = await db.get<{ jobId: string; workerId: string }>('applications', [applicationId], { consistent: true });
+        if (existing?.jobId === params.id && existing.workerId === currentUser.userId) {
+          return error('You have already applied for this job.', 409);
+        }
+        const latestJob = await getOpportunity(params.id);
+        if (!latestJob || latestJob.status !== 'open') return error('This job is no longer accepting applications.', 409);
+        throw err;
+      }
     },
   ],
 
