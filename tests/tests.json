@@ -228,5 +228,26 @@
       "Verify the transaction does not add the worker to the team when the application update condition fails"
     ],
     "expected": "The opportunity update and selected application status update commit together or neither is applied. A conditional conflict returns a refresh-and-retry response."
+  },
+  {
+    "name": "Realtime subscriptions remain complete beyond global table page limits",
+    "viewport": "desktop",
+    "covers": [
+      "subscription pagination",
+      "entity-scoped fan-out",
+      "idempotent subscription creation",
+      "connection ownership verification",
+      "authorized unsubscribe and cleanup"
+    ],
+    "description": "Tracks release-blocking realtime scale and connection-ownership requirements. The current implementation is expected to fail the scale and ownership checks until the documented platform dependencies are resolved.",
+    "steps": [
+      "Create more than 1,000 subscriptions across multiple job conversations",
+      "Subscribe a valid participant to a conversation whose subscription record is beyond the first global 1,000 records",
+      "Send a message and verify every active participant in that conversation receives the entity.update event",
+      "Repeat the same subscribe request and verify it does not create duplicate subscription records",
+      "Attempt to subscribe using a connection ID issued to a different authenticated user and verify server/platform ownership validation rejects it",
+      "Unsubscribe and disconnect one participant and verify only that participant's subscription records are removed"
+    ],
+    "expected": "Notification fan-out reaches all and only active subscribers for the target conversation without scanning the entire growing global table. Repeated subscriptions are idempotent, unsubscribe and disconnect cleanup are scoped to the authenticated connection owner, and connection IDs cannot be spoofed across users. Current code has a 1,000-row global read cap and no documented server-side connection ownership verification, so this scenario is a known release blocker and has not been executed."
   }
 ]
