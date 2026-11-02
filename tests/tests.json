@@ -210,5 +210,23 @@
       "Sign in as a worker and attempt to delete another customer’s job or report a job they did not participate in"
     ],
     "expected": "Saved workers can be added and removed, and unauthorized deletion or reporting is blocked with a clear message."
+  },
+  {
+    "name": "Team selection atomically assigns the worker and accepts the application",
+    "viewport": "desktop",
+    "covers": [
+      "team selection transaction",
+      "application status consistency",
+      "conditional update conflict handling"
+    ],
+    "description": "Verifies the Team-Up opportunity and selected application cannot be left in conflicting states when a selection races with another update.",
+    "steps": [
+      "Create an open Team-Up and submit an application from a worker",
+      "As the team owner, select that worker",
+      "Verify the opportunity's workerIds includes the selected worker and the selected application status is accepted",
+      "Simulate a concurrent change that makes the application no longer applied before the selection transaction commits",
+      "Verify the transaction does not add the worker to the team when the application update condition fails"
+    ],
+    "expected": "The opportunity update and selected application status update commit together or neither is applied. A conditional conflict returns a refresh-and-retry response."
   }
 ]
