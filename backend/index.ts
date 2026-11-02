@@ -551,6 +551,7 @@ export const handler = router({
         );
       const job = await getOpportunity(params.id);
       if (!job) return error('Opportunity not found.', 404);
+      if (job.kind === 'team') return error('Apply to a Team-Up through its application flow. The team organiser selects members.', 409);
       const [accepted] = await db.tx.update(
         'opportunities',
         [
