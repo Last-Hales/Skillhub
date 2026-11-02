@@ -476,7 +476,13 @@ export const handler = router({
       if (job.kind === 'team') {
         const workerIds = [...new Set([...(job.workerIds ?? []), workerId])];
         const filled = workerIds.length >= (job.teamSize ?? 2);
-        const teamJobUpdate = db.tx.update('opportunities', [{ id: params.id, record: { workerIds, workerId: workerIds[0], workerName: chosen.workerName, status: filled ? 'accepted' : 'open' }, if: { status: 'open' } }], { patch: true });
+        // Compare the exact membership snapshot read above. A status-only condition
+        // lets two concurrent team additions overwrite each other's workerIds arrays.
+        const teamJobUpdate = db.tx.update('opportunities', [{
+          id: params.id,
+          record: { workerIds, workerId: workerIds[0], workerName: chosen.workerName, status: filled ? 'accepted' : 'open' },
+          if: { status: 'open', workerIds: job.workerIds },
+        }], { patch: true });
         const chosenApplicationUpdate = db.tx.update('applications', [{ id: chosen.id, record: { status: 'accepted' }, if: { status: 'applied' } }], { patch: true });
         try {
           const [jobResults, applicationResults] = await db.transact([teamJobUpdate, chosenApplicationUpdate]);
