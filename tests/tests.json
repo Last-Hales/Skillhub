@@ -173,19 +173,20 @@
     "expected": "The Team-Up remains open until the requested number of workers is selected, then becomes in progress and all selected members can access the group chat."
   },
   {
-    "name": "Require mutual completion confirmation and allow only one rating per job",
+    "name": "Require mutual completion and one rating per participant pair",
     "viewport": "desktop",
     "covers": [
       "two-party completion confirmation",
       "completion notification",
       "ratings after completion",
-      "one-time rating enforcement",
-      "rating option hidden after submission",
+      "one rating per job and recipient",
+      "legacy rating compatibility",
+      "per-participant Team-Up rating controls",
       "idempotent participant confirmation records",
       "simultaneous confirmation safety",
       "keyed confirmation hydration in My Jobs"
     ],
-    "description": "Verifies a job is not completed until all required participants confirm and each user can rate only once.",
+    "description": "Verifies completion requires all participants and each participant can rate every other eligible participant once per completed job.",
     "steps": [
       "Actor A and Actor B open an accepted job",
       "Actor A confirms completion and refreshes Jobs",
@@ -193,9 +194,9 @@
       "Submit both participants' confirmations concurrently and verify neither confirmation is lost",
       "Refresh My Jobs and verify each participant sees their own confirmation state from the keyed confirmation record",
       "Actor B confirms completion",
-      "Actor A submits a rating and returns to the job history"
+      "Actor A rates Actor B, then rates Actor C in a Team-Up, and verifies a repeat rating for Actor B is rejected"
     ],
-    "expected": "Each participant has one idempotent keyed confirmation record. The job stays in progress after only one participant confirms, becomes Completed once all required participants have confirmed (including concurrent confirmations), and My Jobs correctly shows the signed-in participant's confirmation state after refresh. Each user can rate only once."
+    "expected": "Each participant has one idempotent keyed confirmation record. The job stays in progress after only one participant confirms, becomes Completed once all required participants have confirmed (including concurrent confirmations), and My Jobs correctly shows the signed-in participant's confirmation state after refresh. A rater can submit one rating per eligible recipient, separate Team-Up members can each be rated, duplicate recipient ratings are rejected, and pre-existing legacy ratings still block a repeat for their original recipient."
   },
   {
     "name": "Saved workers, job cancellation and permission guardrails",
