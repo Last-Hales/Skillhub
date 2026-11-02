@@ -2146,3 +2146,20 @@ a {
   justify-content: center;
   padding: 22px 0 8px;
 }
+
+
+.rating-target-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  border-top: 1px solid var(--border, #dbe3ef);
+}
+.rating-target-row > b { min-width: 120px; }
+.rating-target-row .rating-stars { margin-left: auto; }
+@media (max-width: 560px) {
+  .rating-target-row { align-items: flex-start; flex-direction: column; }
+  .rating-target-row .rating-stars { margin-left: 0; }
+}
