@@ -533,13 +533,48 @@ export const handler = router({
       if (!participants.includes(currentUser.userId)) return error('You are not a participant in this job.', 403);
       if (job.status !== 'accepted')
         return error('Only accepted jobs can be marked complete.', 400);
-      const confirmed = [...new Set([...(job.completionConfirmedBy ?? []), currentUser.userId])];
       const required = [...new Set([job.customerId, ...(job.workerIds?.length ? job.workerIds : job.workerId ? [job.workerId] : [])])];
-      const completedNow = required.every(id => confirmed.includes(id));
-      const [updated] = await db.tx.update('opportunities', [{ id: params.id, record: { completionConfirmedBy: confirmed, ...(completedNow ? { status: 'completed' } : {}) }, if: { status: 'accepted' } }], { patch: true });
-      if (!updated) return error('This job status changed. Refresh and try again.', 409);
-      for (const participant of required.filter(id => id !== currentUser.userId)) await db.add('notifications', [{ userId: participant, title: completedNow ? 'Job completed' : 'Completion confirmation needed', body: completedNow ? 'Both sides confirmed ' + job.skill + ' is complete.' : 'The other party marked ' + job.skill + ' complete. Please confirm in Jobs.', jobId: params.id, read: false, createdAt: new Date().toISOString() }]);
-      return json({ completed: completedNow, confirmed: true, confirmations: confirmed.length, required: required.length });
+      const confirmationId = (params.id + '_' + currentUser.userId).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 180);
+      const [confirmationCreated] = await db.tx.add('completionConfirmations', [{
+        id: confirmationId,
+        jobId: params.id,
+        userId: currentUser.userId,
+        confirmedAt: new Date().toISOString(),
+      }]);
+      // A null result is an idempotent duplicate only if the keyed record exists.
+      if (!confirmationCreated) {
+        const [existingConfirmation] = await db.get<{ jobId: string; userId: string }>('completionConfirmations', [confirmationId], { consistent: true });
+        if (!existingConfirmation || existingConfirmation.jobId !== params.id || existingConfirmation.userId !== currentUser.userId) {
+          return error('Could not record your completion confirmation. Please try again.', 500);
+        }
+      }
+      const confirmationIds = required.map(id => (params.id + '_' + id).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 180));
+      const confirmations = await db.get<{ jobId: string; userId: string }>('completionConfirmations', confirmationIds, { consistent: true });
+      const confirmedIds = required.filter((id, index) => {
+        const record = confirmations[index];
+        return record?.jobId === params.id && record.userId === id;
+      });
+      const completedNow = confirmedIds.length === required.length;
+      if (completedNow) {
+        const [updated] = await db.tx.update('opportunities', [{
+          id: params.id,
+          record: { status: 'completed', completionConfirmedAt: new Date().toISOString() },
+          if: { status: 'accepted' },
+        }], { patch: true });
+        if (!updated) {
+          const latest = await getOpportunity(params.id);
+          if (latest?.status !== 'completed') return error('This job status changed. Refresh and try again.', 409);
+        }
+      }
+      for (const participant of required.filter(id => id !== currentUser.userId)) await db.add('notifications', [{
+        userId: participant,
+        title: completedNow ? 'Job completed' : 'Completion confirmation needed',
+        body: completedNow ? 'Both sides confirmed ' + job.skill + ' is complete.' : 'The other party marked ' + job.skill + ' complete. Please confirm in Jobs.',
+        jobId: params.id,
+        read: false,
+        createdAt: new Date().toISOString(),
+      }]);
+      return json({ completed: completedNow, confirmed: true, confirmations: confirmedIds.length, required: required.length });
     },
   ],
 
