@@ -389,15 +389,19 @@ export const handler = router({
       } catch {
         return error('This request changed while being reviewed. Refresh and try again.', 409);
       }
-      await db.add('notifications', [{
-        userId: request.userId,
-        title: decision === 'approved' ? 'Identity verification approved' : 'Identity verification needs attention',
-        body: decision === 'approved'
-          ? 'Your SkillHub identity verification has been approved.'
-          : 'Your SkillHub identity verification was not approved. You can submit a new request after reviewing the requirements.',
-        read: false,
-        createdAt: reviewedAt,
-      }]);
+      try {
+        await db.add('notifications', [{
+          userId: request.userId,
+          title: decision === 'approved' ? 'Identity verification approved' : 'Identity verification needs attention',
+          body: decision === 'approved'
+            ? 'Your SkillHub identity verification has been approved.'
+            : 'Your SkillHub identity verification was not approved. You can submit a new request after reviewing the requirements.',
+          read: false,
+          createdAt: reviewedAt,
+        }]);
+      } catch {
+        // The review decision is already committed atomically; notification delivery is best-effort.
+      }
       return json({ reviewed: true, status: decision });
     },
   ],
