@@ -116,6 +116,7 @@ type Bootstrap = {
   workers: Worker[];
   opportunities: Opportunity[];
   myJobs: Opportunity[];
+  isVerificationReviewer?: boolean;
   notifications?: { id: string; title: string; body: string; createdAt: string; read: boolean }[];
   ratedJobIds?: string[];
   ratedParticipantKeys?: string[];
@@ -186,6 +187,9 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [darkMode, setDarkMode] = useState(() => window.localStorage.getItem('skillhub-theme') === 'dark');
   const [verificationBusy, setVerificationBusy] = useState(false);
+  const [verificationRequests, setVerificationRequests] = useState<{id:string;userId:string;fullName:string;role:string;email?:string;createdAt:string}[]>([]);
+  const [verificationReviewLoading, setVerificationReviewLoading] = useState(false);
+  const [verificationReviewNote, setVerificationReviewNote] = useState<Record<string,string>>({});
   const [reportText, setReportText] = useState('');
   const [showReportForm, setShowReportForm] = useState(false);
   const [customSkill, setCustomSkill] = useState('');
@@ -454,6 +458,32 @@ function App() {
     } catch (err) {
       setErrorText(err instanceof Error ? err.message : 'Could not request verification.');
     } finally { setVerificationBusy(false); }
+  }
+
+  async function loadVerificationRequests() {
+    setVerificationReviewLoading(true);
+    setErrorText('');
+    try {
+      const response = await api.get('/api/admin/verification-requests');
+      setVerificationRequests(response.data.requests ?? []);
+    } catch (err) {
+      setErrorText(err instanceof Error ? err.message : 'Could not load verification requests.');
+    } finally { setVerificationReviewLoading(false); }
+  }
+
+  async function reviewVerificationRequest(id: string, decision: 'approve' | 'reject') {
+    setVerificationReviewLoading(true);
+    setErrorText('');
+    try {
+      await api.post('/api/admin/verification-requests/' + encodeURIComponent(id) + '/review', {
+        decision, note: verificationReviewNote[id] ?? '',
+      });
+      setVerificationRequests(current => current.filter(request => request.id !== id));
+      setVerificationReviewNote(current => ({ ...current, [id]: '' }));
+      setNotice(decision === 'approve' ? 'Identity verification approved.' : 'Verification request rejected.');
+    } catch (err) {
+      setErrorText(err instanceof Error ? err.message : 'Could not review this request.');
+    } finally { setVerificationReviewLoading(false); }
   }
 
   async function submitReport(event: React.FormEvent) {
@@ -1774,6 +1804,16 @@ function App() {
               </button>
             </form>
             <div className="verification-card"><ShieldCheck size={20} /><div><b>Identity verification · {profile.role === 'worker' ? 'Worker' : 'Customer'}</b><p>{profile.verificationStatus === 'verified' ? 'Your identity check is verified.' : profile.verificationStatus === 'pending' ? 'Your verification request is awaiting review.' : 'Verification will require an approved identity check using NIN and/or passport through a secure, authorised provider. SkillHub should not collect identity numbers or document photos directly.'}</p></div><button className="button button-outline button-small" disabled={verificationBusy || profile.verificationStatus === 'pending' || profile.verificationStatus === 'verified'} onClick={requestVerification}>{profile.verificationStatus === 'pending' ? 'Pending review' : profile.verificationStatus === 'verified' ? 'Verified' : 'Request verification'}</button></div>
+             {data.isVerificationReviewer && <section className="verification-review-panel">
+               <div className="section-title-row"><div><p className="eyebrow">TRUST & SAFETY</p><h3>Identity verification reviews</h3></div><button className="button button-outline button-small" onClick={loadVerificationRequests} disabled={verificationReviewLoading}>{verificationReviewLoading ? 'Loading…' : 'Load requests'}</button></div>
+               <p className="muted-copy">Review requests only after checking identity through an approved, secure provider. Do not ask users to post identity documents in SkillHub chat.</p>
+               {verificationRequests.map(request => <article className="verification-review-item" key={request.id}>
+                 <div><b>{request.fullName}</b><p>{request.role} · {request.email ?? 'Email unavailable'}</p><small>Submitted {new Date(request.createdAt).toLocaleString()}</small></div>
+                 <textarea rows={2} maxLength={500} value={verificationReviewNote[request.id] ?? ''} onChange={event => setVerificationReviewNote(current => ({ ...current, [request.id]: event.target.value }))} placeholder="Optional reviewer note" />
+                 <div className="profile-actions-row"><button className="button button-primary button-small" disabled={verificationReviewLoading} onClick={() => reviewVerificationRequest(request.id, 'approve')}>Approve</button><button className="button button-outline button-small" disabled={verificationReviewLoading} onClick={() => reviewVerificationRequest(request.id, 'reject')}>Reject</button></div>
+               </article>)}
+               {!verificationRequests.length && <p className="empty-state">Load requests to see pending identity checks.</p>}
+             </section>
             {profile.role === 'worker' && <section className="portfolio-section"><div className="section-title-row"><div><p className="eyebrow">SHOW YOUR WORK</p><h3>My portfolio</h3></div></div><div className="portfolio-publish"><textarea rows={2} maxLength={500} value={portfolioCaption} onChange={event => setPortfolioCaption(event.target.value)} placeholder="Add a short description of this work (optional)" /><label className="button button-primary">{portfolioBusy ? 'Publishing…' : 'Post a photo'}<input type="file" accept="image/jpeg,image/png,image/webp" hidden disabled={portfolioBusy} onChange={event => publishPortfolio(event.target.files?.[0])} /></label></div><div className="portfolio-grid">{(data.portfolioPosts ?? []).filter(post => post.ownerId === user.userId).map(post => <article className="portfolio-post" key={post.id}><img src={post.imageUrl} alt="Worker portfolio" /><p>{post.caption}</p><button className="portfolio-like" onClick={() => togglePortfolioLike(post.id)}>♥ {post.likes} {post.likedByMe ? 'Liked' : 'Like'}</button><div className="portfolio-comments">{post.comments.map(comment => <p key={comment.id}><b>{comment.userName}:</b> {comment.text}</p>)}<div><input value={portfolioComment[post.id] ?? ''} onChange={event => setPortfolioComment(current => ({ ...current, [post.id]: event.target.value }))} placeholder="Write a comment…" /><button className="button button-outline button-small" onClick={() => addPortfolioComment(post.id)}>Comment</button></div></div></article>)}</div>{!(data.portfolioPosts ?? []).some(post => post.ownerId === user.userId) && <p className="empty-state">Your work photos will appear here. Post your first project when you're ready.</p>}</section>}
             {profile.role === 'worker' && <a className="button button-outline whatsapp-workers-link" href="https://chat.whatsapp.com/D5LeU6XlOT92UTt70pww23?s=cl&p=a&mlu=4&ilr=4&iam=2" target="_blank" rel="noreferrer"><Users size={17} /> Join the SkillHub Workers WhatsApp group</a>}
             <div className="profile-actions-row"><button type="button" className="button button-outline" onClick={() => setShowReportForm(true)}><ShieldAlert size={15} /> Report a problem</button><button type="button" className="button button-outline" onClick={() => setDarkMode(value => !value)}>{darkMode ? <Sun size={15} /> : <Moon size={15} />}{darkMode ? 'Light mode' : 'Dark mode'}</button></div>
