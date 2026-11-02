@@ -182,183 +182,6 @@ export const handler = router({
         ratedJobIds,
         savedWorkerIds,
         portfolioPosts,
-        discoveryCursors: {
-          profiles: profilesPage.nextToken ?? null,
-          opportunities: jobsPage.nextToken ?? null,
-        },
-        myJobsCursors: {
-          opportunities: jobsPage.nextToken ?? null,
-          applications: applicationsPage.nextToken ?? null,
-        },
-      });
-    },
-  ],
-
-  'GET /api/my-jobs-page': [
-    requireAuth(),
-    async ({ user, query }) => {
-      const currentUser = user!;
-      const [profile] = await db.get<Profile>('profiles', [currentUser.userId]);
-      if (!profile) return error('Complete your profile before viewing jobs.', 400);
-      const opportunitiesToken = cleanText(query.opportunitiesNextToken, 2048);
-      const applicationsToken = cleanText(query.applicationsNextToken, 2048);
-      const [jobsPage, applicationsPage] = await Promise.all([
-        opportunitiesToken
-          ? db.list<Opportunity>('opportunities', { limit: 100, nextToken: opportunitiesToken })
-          : Promise.resolve({ items: [], nextToken: undefined }),
-        applicationsToken
-          ? db.list<Application>('applications', { limit: 500, nextToken: applicationsToken })
-          : Promise.resolve({ items: [], nextToken: undefined }),
-      ]);
-      const applicationJobIds = applicationsPage.items
-        .filter(app => app.workerId === currentUser.userId)
-        .map(app => app.jobId);
-      const directJobs = jobsPage.items.filter(job =>
-        job.customerId === currentUser.userId ||
-        job.workerId === currentUser.userId ||
-        (job.workerIds ?? []).includes(currentUser.userId)
-      );
-      const ids = [...new Set([
-        ...directJobs.map(job => (job as Opportunity & { id: string }).id),
-        ...applicationJobIds,
-      ])];
-      // db.get returns records in request order and does not attach their database IDs.
-      // Keep the requested IDs alongside each returned record, and stay within the 500-key cap.
-      const jobChunks: string[][] = [];
-      for (let index = 0; index < ids.length; index += 500) jobChunks.push(ids.slice(index, index + 500));
-      const fetchedJobChunks = await Promise.all(jobChunks.map(chunk => db.get<Opportunity>('opportunities', chunk)));
-      const jobById = new Map<string, Opportunity>();
-      fetchedJobChunks.forEach((records, chunkIndex) => {
-        jobChunks[chunkIndex].forEach((id, recordIndex) => {
-          const record = records[recordIndex];
-          if (record) jobById.set(id, record);
-        });
-      });
-      const currentApplications = applicationsPage.items;
-      const workerIds = [...new Set(currentApplications
-        .filter(app => directJobs.some(job => (job as Opportunity & { id: string }).id === app.jobId) && app.workerId !== currentUser.userId)
-        .map(app => app.workerId))];
-      const [workerProfiles, ratingsPage] = await Promise.all([
-        workerIds.length ? db.get<Profile>('profiles', workerIds) : Promise.resolve([]),
-        db.list<{ targetId: string; score: number }>('ratings', { limit: 500 }),
-      ]);
-      const profileById = new Map<string, Profile>();
-      workerIds.forEach((id, index) => {
-        const worker = workerProfiles[index];
-        if (worker) profileById.set(id, worker);
-      });
-      const workerImagePaths = [...new Set(workerProfiles
-        .filter((worker): worker is Profile => Boolean(worker?.profileImagePath))
-        .map(worker => worker.profileImagePath as string))];
-      const workerImageUrls = workerImagePaths.length ? await storage.url(workerImagePaths) : [];
-      const workerImageByPath = new Map(workerImageUrls.map(item => [item.path, item.url]));
-      const freshWorkerImage = (worker?: Profile) => worker
-        ? worker.profileImagePath ? workerImageByPath.get(worker.profileImagePath) : worker.profileImage
-        : undefined;
-      const ratings = ratingsPage.items;
-      const myJobs = ids.map(id => {
-        const job = jobById.get(id);
-        if (!job) return null;
-        const item = job as Opportunity;
-        const ownApplication = currentApplications.find(app => app.jobId === id && app.workerId === currentUser.userId);
-        const applicants = item.customerId === currentUser.userId
-          ? currentApplications.filter(app => app.jobId === id).map(app => {
-              const worker = profileById.get(app.workerId);
-              const workerRatings = ratings.filter(rating => rating.targetId === app.workerId);
-              return {
-                ...app,
-                workerSkills: worker?.skills ?? '',
-                workerState: worker?.state ?? '',
-                workerRating: workerRatings.length ? workerRatings.reduce((sum, rating) => sum + rating.score, 0) / workerRatings.length : 0,
-                workerRatingCount: workerRatings.length,
-                workerImage: freshWorkerImage(worker),
-                workerVerified: worker?.verificationStatus === 'verified',
-              };
-            })
-          : undefined;
-        return {
-          ...job,
-          id,
-          ...(applicants ? { applicants } : {}),
-          ...(ownApplication ? { myApplicationStatus: ownApplication.status } : {}),
-          isOwner: item.customerId === currentUser.userId,
-          completionConfirmedBy: item.completionConfirmedBy ?? [],
-        };
-      }).filter((job): job is NonNullable<typeof job> => Boolean(job))
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      return json({
-        myJobs,
-        myJobsCursors: {
-          opportunities: jobsPage.nextToken ?? null,
-          applications: applicationsPage.nextToken ?? null,
-        },
-      });
-    },
-  ],
-
-  'GET /api/discovery-page': [
-    requireAuth(),
-    async ({ user, query }) => {
-      const currentUser = user!;
-      const [profile] = await db.get<Profile>('profiles', [currentUser.userId]);
-      if (!profile) return error('Complete your profile before browsing SkillHub.', 400);
-      const profileToken = cleanText(query.profilesNextToken, 2048);
-      const opportunityToken = cleanText(query.opportunitiesNextToken, 2048);
-      // A missing cursor means that feed is exhausted. Do not restart it at page one.
-      // This keeps each click bounded to the feed that still has another page.
-      const [profilesPage, jobsPage, ratingsPage, applicationsPage] = await Promise.all([
-        profileToken
-          ? db.list<Profile>('profiles', { limit: 100, nextToken: profileToken })
-          : Promise.resolve({ items: [], nextToken: undefined }),
-        opportunityToken
-          ? db.list<Opportunity>('opportunities', { limit: 100, nextToken: opportunityToken })
-          : Promise.resolve({ items: [], nextToken: undefined }),
-        profileToken
-          ? db.list<{ targetId: string; score: number }>('ratings', { limit: 500 })
-          : Promise.resolve({ items: [], nextToken: undefined }),
-        opportunityToken
-          ? db.list<Application>('applications', { limit: 500 })
-          : Promise.resolve({ items: [], nextToken: undefined }),
-      ]);
-      const imagePaths = [...new Set(profilesPage.items.map(item => item.profileImagePath).filter((path): path is string => Boolean(path)))];
-      const imageUrls = imagePaths.length ? await storage.url(imagePaths) : [];
-      const imageByPath = new Map(imageUrls.map(item => [item.path, item.url]));
-      const workers = profilesPage.items
-        .filter(item => item.role === 'worker' && item.available)
-        .map(item => {
-          const workerId = (item as Profile & { id: string }).id;
-          const ownRatings = ratingsPage.items.filter(rating => rating.targetId === workerId);
-          return {
-            id: workerId,
-            role: item.role,
-            fullName: item.fullName,
-            country: item.country,
-            state: item.state,
-            skills: item.skills,
-            available: item.available,
-            rating: ownRatings.length ? ownRatings.reduce((sum, rating) => sum + rating.score, 0) / ownRatings.length : 0,
-            ratingCount: ownRatings.length,
-            profileImage: item.profileImagePath ? imageByPath.get(item.profileImagePath) : item.profileImage,
-            portfolio: item.portfolio,
-            verified: item.verificationStatus === 'verified',
-          };
-        });
-      const applications = applicationsPage.items;
-      const opportunities = jobsPage.items
-        .filter(job => {
-          const jobId = (job as Opportunity & { id: string }).id;
-          return job.status === 'open' &&
-            job.customerId !== currentUser.userId &&
-            !(profile.role === 'worker' && applications.some(app => app.jobId === jobId && app.workerId === currentUser.userId));
-        })
-        .map(job => ({ id: (job as Opportunity & { id: string }).id, ...job }));
-      return json({
-        workers,
-        opportunities,
-        discoveryCursors: {
-          profiles: profilesPage.nextToken ?? null,
-          opportunities: jobsPage.nextToken ?? null,
-        },
       });
     },
   ],
@@ -487,7 +310,8 @@ export const handler = router({
     requireAuth(),
     async ({ params, user }) => {
       const currentUser = user!;
-      const [post] = await db.get<{ ownerId: string }>('portfolioPosts', [params.postId]);
+      const postPage = await db.list<{ ownerId: string }>('portfolioPosts', { limit: 300 });
+      const post = postPage.items.find(item => (item as typeof item & { id: string }).id === params.postId);
       if (!post) return error('Portfolio post not found.', 404);
       const likeId = (params.postId + '_' + currentUser.userId).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 180);
       const existing = await db.get('portfolioLikes', [likeId]);
@@ -501,8 +325,8 @@ export const handler = router({
     async ({ params, body, user }) => {
       const currentUser = user!;
       const profile = await requireProfile(currentUser.userId);
-      const [post] = await db.get<{ ownerId: string }>('portfolioPosts', [params.postId]);
-      if (!post) return error('Portfolio post not found.', 404);
+      const postPage = await db.list<{ ownerId: string }>('portfolioPosts', { limit: 300 });
+      if (!postPage.items.some(item => (item as typeof item & { id: string }).id === params.postId)) return error('Portfolio post not found.', 404);
       const text = cleanText((body as Record<string, unknown> | null)?.text, 500);
       if (!text) return error('Write a comment first.', 400);
       const [id] = await db.add('portfolioComments', [{ postId: params.postId, userId: currentUser.userId, userName: profile.fullName, text, createdAt: new Date().toISOString() }]);
@@ -563,8 +387,7 @@ export const handler = router({
           status: 'open',
           createdAt: new Date().toISOString(),
         },
-      ]);
-      if (!id)
+      ]);      if (!id)
         return error('Could not post this opportunity. Please try again.', 500);
       return json({ id, created: true });
     },
@@ -606,10 +429,14 @@ export const handler = router({
       if (job.kind === 'team') {
         const workerIds = [...new Set([...(job.workerIds ?? []), workerId])];
         const filled = workerIds.length >= (job.teamSize ?? 2);
-        const [updated] = await db.tx.update('opportunities', [{ id: params.id, record: { workerIds, workerId: workerIds[0], workerName: chosen.workerName, status: filled ? 'accepted' : 'open' }, if: { status: 'open' } }], { patch: true });
-        if (!updated) return error('The team request changed. Refresh and try again.', 409);
-        const [applicationUpdated] = await db.tx.update('applications', [{ id: chosen.id, record: { status: 'accepted' }, if: { status: 'applied' } }], { patch: true });
-        if (!applicationUpdated) return error('That application was already processed.', 409);
+        const teamJobUpdate = db.tx.update('opportunities', [{ id: params.id, record: { workerIds, workerId: workerIds[0], workerName: chosen.workerName, status: filled ? 'accepted' : 'open' }, if: { status: 'open' } }], { patch: true });
+        const chosenApplicationUpdate = db.tx.update('applications', [{ id: chosen.id, record: { status: 'accepted' }, if: { status: 'applied' } }], { patch: true });
+        try {
+          const [jobResults, applicationResults] = await db.transact([teamJobUpdate, chosenApplicationUpdate]);
+          if (!jobResults?.[0] || !applicationResults?.[0]) return error('The team request or application changed. Refresh and try again.', 409);
+        } catch {
+          return error('The team request or application changed. Refresh and try again.', 409);
+        }
         await db.add('notifications', [{ userId: workerId, title: 'You joined a team', body: 'You were added to the team for ' + job.skill, jobId: params.id, read: false, createdAt: new Date().toISOString() }]);
         if (filled) {
           for (const applicant of applicants.filter(app => app.status === 'applied' && !workerIds.includes(app.workerId))) {
@@ -671,11 +498,6 @@ export const handler = router({
         );
       const job = await getOpportunity(params.id);
       if (!job) return error('Opportunity not found.', 404);
-      if (job.kind === 'team') return error('Team-up opportunities use the team selection process.', 400);
-      if (job.customerId === currentUser.userId) return error('You cannot accept your own opportunity.', 403);
-      if (!job.skill.toLowerCase().split(/[,/ ]+/).some(word => word.length > 2 && profile.skills.toLowerCase().includes(word))) {
-        return error('Your listed skills do not appear to match this job.', 400);
-      }
       const [accepted] = await db.tx.update(
         'opportunities',
         [
@@ -685,19 +507,16 @@ export const handler = router({
               status: 'accepted',
               workerId: currentUser.userId,
               workerName: profile.fullName,
-              workerIds: [currentUser.userId],
             },
             if: { status: 'open' },
           },
-        ],
-        { patch: true }
+        ],        { patch: true }
       );
       if (!accepted)
         return error(
           'This opportunity has already been accepted or is no longer open.',
           409
         );
-      await db.add('notifications', [{ userId: job.customerId, title: 'Worker accepted your opportunity', body: profile.fullName + ' accepted ' + job.skill, jobId: params.id, read: false, createdAt: new Date().toISOString() }]);
       return json({ accepted: true, id: params.id });
     },
   ],
@@ -714,46 +533,11 @@ export const handler = router({
       if (!participants.includes(currentUser.userId)) return error('You are not a participant in this job.', 403);
       if (job.status !== 'accepted')
         return error('Only accepted jobs can be marked complete.', 400);
+      const confirmed = [...new Set([...(job.completionConfirmedBy ?? []), currentUser.userId])];
       const required = [...new Set([job.customerId, ...(job.workerIds?.length ? job.workerIds : job.workerId ? [job.workerId] : [])])];
-      // One immutable confirmation row per participant prevents concurrent requests
-      // from overwriting each other's confirmation array.
-      const confirmationId = (params.id + '_' + currentUser.userId).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 180);
-      const [confirmation] = await db.tx.add('completionConfirmations', [{
-        id: confirmationId,
-        jobId: params.id,
-        userId: currentUser.userId,
-        confirmedAt: new Date().toISOString(),
-      }]);
-      if (!confirmation) {
-        const existing = await db.get('completionConfirmations', [confirmationId], { consistent: true });
-        if (!existing[0]) return error('Could not record your completion confirmation.', 500);
-      }
-      const confirmationIds = required.map(id =>
-        (params.id + '_' + id).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 180)
-      );
-      const confirmationRows = await db.get<{ jobId: string; userId: string }>('completionConfirmations', confirmationIds, { consistent: true });
-      const confirmed = [...new Set([
-        ...(job.completionConfirmedBy ?? []),
-        ...confirmationRows.filter((item): item is { jobId: string; userId: string } => Boolean(item) && item!.jobId === params.id).map(item => item.userId),
-      ])];
       const completedNow = required.every(id => confirmed.includes(id));
-      if (completedNow) {
-        const [updated] = await db.tx.update('opportunities', [{
-          id: params.id,
-          record: { completionConfirmedBy: confirmed, status: 'completed' },
-          if: { status: 'accepted' },
-        }], { patch: true });
-        if (!updated) {
-          const latest = await getOpportunity(params.id);
-          if (latest?.status !== 'completed') return error('This job status changed. Refresh and try again.', 409);
-        }
-      } else {
-        await db.tx.update('opportunities', [{
-          id: params.id,
-          record: { completionConfirmedBy: confirmed },
-          if: { status: 'accepted' },
-        }], { patch: true });
-      }
+      const [updated] = await db.tx.update('opportunities', [{ id: params.id, record: { completionConfirmedBy: confirmed, ...(completedNow ? { status: 'completed' } : {}) }, if: { status: 'accepted' } }], { patch: true });
+      if (!updated) return error('This job status changed. Refresh and try again.', 409);
       for (const participant of required.filter(id => id !== currentUser.userId)) await db.add('notifications', [{ userId: participant, title: completedNow ? 'Job completed' : 'Completion confirmation needed', body: completedNow ? 'Both sides confirmed ' + job.skill + ' is complete.' : 'The other party marked ' + job.skill + ' complete. Please confirm in Jobs.', jobId: params.id, read: false, createdAt: new Date().toISOString() }]);
       return json({ completed: completedNow, confirmed: true, confirmations: confirmed.length, required: required.length });
     },
@@ -761,7 +545,7 @@ export const handler = router({
 
   'GET /api/messages/:jobId': [
     requireAuth(),
-    async ({ params, query, user }) => {
+    async ({ params, user }) => {
       const currentUser = user!;
       const job = await getOpportunity(params.jobId);
       if (!job) return error('Job conversation not found.', 404);
@@ -770,43 +554,30 @@ export const handler = router({
       ) {
         return error('You do not have access to this conversation.', 403);
       }
-      const requestedToken = cleanText(query.nextToken, 2048);
       const page = await db.list<{
         jobId: string; senderId: string; senderName: string; text: string; createdAt: string;
         deliveredAt?: string; readAt?: string;
-      }>('messages', { limit: 100, ...(requestedToken ? { nextToken: requestedToken } : {}) });
+      }>('messages', { limit: 100 });
       const incoming = page.items.filter(message => message.jobId === params.jobId && message.senderId !== currentUser.userId && !message.deliveredAt);
-      const deliveredAt = new Date().toISOString();
-      if (incoming.length) await db.tx.update('messages', incoming.map(message => ({ id: (message as typeof message & { id: string }).id, record: { deliveredAt }, if: { deliveredAt: null } })), { patch: true });
+      if (incoming.length) await db.tx.update('messages', incoming.map(message => ({ id: (message as typeof message & { id: string }).id, record: { deliveredAt: new Date().toISOString() }, if: { deliveredAt: null } })), { patch: true });
       const messages = page.items
         .filter(message => message.jobId === params.jobId)
-        .map(message => ({ ...message, id: message.id, ...(incoming.some(item => item.id === message.id) ? { deliveredAt } : {}) }))
+        .map(message => ({ ...message, id: message.id, ...(incoming.some(item => item.id === message.id) ? { deliveredAt: new Date().toISOString() } : {}) }))
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-      return json({ messages, nextToken: page.nextToken ?? null });
+      return json({ messages });
     },
   ],
 
   'POST /api/messages/:jobId/read': [
     requireAuth(),
-    async ({ params, user, body }) => {
+    async ({ params, user }) => {
       const currentUser = user!;
       const job = await getOpportunity(params.jobId);
       if (!job || (![job.customerId, job.workerId, ...(job.workerIds ?? [])].filter(Boolean).includes(currentUser.userId))) return error('You do not have access to this conversation.', 403);
-      const input = (body ?? {}) as Record<string, unknown>;
-      const messageIds = Array.isArray(input.messageIds)
-        ? [...new Set(input.messageIds.filter((id): id is string => typeof id === 'string').map(id => cleanText(id, 200)).filter(Boolean))].slice(0, 100)
-        : [];
-      if (!messageIds.length) return json({ read: true, updated: 0 });
-      const records = await db.get<{ jobId: string; senderId: string; readAt?: string }>('messages', messageIds);
-      const unreadIds = messageIds.filter((id, index) => {
-        const message = records[index];
-        return Boolean(message && message.jobId === params.jobId && message.senderId !== currentUser.userId && !message.readAt);
-      });
-      if (unreadIds.length) {
-        const deliveredAt = new Date().toISOString();
-        await db.tx.update('messages', unreadIds.map(id => ({ id, record: { readAt: deliveredAt } })), { patch: true });
-      }
-      return json({ read: true, updated: unreadIds.length });
+      const page = await db.list<{ jobId: string; senderId: string; readAt?: string }>('messages', { limit: 200 });
+      const unread = page.items.filter(message => message.jobId === params.jobId && message.senderId !== currentUser.userId && !message.readAt);
+      if (unread.length) await db.tx.update('messages', unread.map(message => ({ id: (message as typeof message & { id: string }).id, record: { readAt: new Date().toISOString() } })), { patch: true });
+      return json({ read: true });
     },
   ],
 
