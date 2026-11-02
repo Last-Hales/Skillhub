@@ -103,7 +103,9 @@ export const handler = router({
       const notifications = notificationsPage.items.filter(item => item.userId === currentUser.userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       const applications = applicationsPage.items;
       const ratings = ratingsPage.items;
-      const ratedJobIds = ratings.filter(item => item.raterId === currentUser.userId).map(item => item.jobId).filter((id): id is string => Boolean(id));
+      const myRatings = ratings.filter(item => item.raterId === currentUser.userId);
+      const ratedJobIds = [...new Set(myRatings.map(item => item.jobId).filter((id): id is string => Boolean(id)))];
+      const ratedParticipantKeys = myRatings.filter(item => item.jobId && item.targetId).map(item => `${item.jobId}:${item.targetId}`);
       const imagePaths = [...new Set(profilesPage.items.map(item => item.profileImagePath).filter((path): path is string => Boolean(path)))];
       const imageUrls = imagePaths.length ? await storage.url(imagePaths) : [];
       const imageByPath = new Map(imageUrls.map(item => [item.path, item.url]));
@@ -192,6 +194,7 @@ export const handler = router({
         myJobs,
         notifications,
         ratedJobIds,
+        ratedParticipantKeys,
         savedWorkerIds,
         portfolioPosts,
       });
@@ -744,9 +747,22 @@ export const handler = router({
           403
         );
       }
-      const ratingId = (jobId + '_' + currentUser.userId)
+      const legacyRatingId = (jobId + '_' + currentUser.userId)
         .replace(/[^A-Za-z0-9_.-]/g, '_')
         .slice(0, 180);
+      const ratingId = (jobId + '_' + currentUser.userId + '_' + targetId)
+        .replace(/[^A-Za-z0-9_.-]/g, '_')
+        .slice(0, 180);
+      // Preserve old one-rating records while allowing a separate rating for each
+      // participant. A legacy rating only blocks a repeat for its original target.
+      const [legacyRating, existingRating] = await db.get<{
+        jobId?: string; raterId?: string; targetId?: string; score?: number;
+      }>('ratings', [legacyRatingId, ratingId], { consistent: true });
+      if (existingRating || (legacyRating?.jobId === jobId &&
+          legacyRating.raterId === currentUser.userId &&
+          legacyRating.targetId === targetId)) {
+        return error('You have already rated this participant for this job.', 409);
+      }
       const [id] = await db.tx.add('ratings', [
         {
           id: ratingId,
@@ -757,7 +773,7 @@ export const handler = router({
           createdAt: new Date().toISOString(),
         },
       ]);
-      if (!id) return error('You have already rated this job.', 409);
+      if (!id) return error('You have already rated this participant for this job.', 409);
       return json({ submitted: true });
     },
   ],
