@@ -19,6 +19,7 @@ import {
   Sun,
   ShieldAlert,
   MapPin,
+  Menu,
   MessageCircle,
   Search,
   ShieldCheck,
@@ -163,6 +164,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<
     'discover' | 'opportunities' | 'messages' | 'profile'
   >('discover');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showOpportunityForm, setShowOpportunityForm] = useState(false);
   const [jobForm, setJobForm] = useState({
     skill: '',
@@ -1043,7 +1045,7 @@ function App() {
 
   return (
     <main className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${mobileMenuOpen ? "mobile-open" : ""}`} aria-label="Main navigation">
         <a className="brand side-brand" href="#home">
           <span className="brand-mark logo-image-mark">
             <img src="/resources/skillhub-logo.jpg" alt="SkillHub logo" />
@@ -1057,7 +1059,7 @@ function App() {
           className={
             activeTab === 'discover' ? 'side-link active' : 'side-link'
           }
-          onClick={() => setActiveTab('discover')}
+          onClick={() => { setActiveTab('discover'); setMobileMenuOpen(false); }}
         >
           <Compass size={18} /> Discover
         </button>
@@ -1065,7 +1067,7 @@ function App() {
           className={
             activeTab === 'opportunities' ? 'side-link active' : 'side-link'
           }
-          onClick={() => setActiveTab('opportunities')}
+          onClick={() => { setActiveTab('opportunities'); setMobileMenuOpen(false); }}
         >
           <BriefcaseBusiness size={18} /> Opportunities{' '}
           <span className="side-count">{openJobs.length}</span>
@@ -1074,7 +1076,7 @@ function App() {
           className={
             activeTab === 'messages' ? 'side-link active' : 'side-link'
           }
-          onClick={() => setActiveTab('messages')}
+          onClick={() => { setActiveTab('messages'); setMobileMenuOpen(false); }}
         >
           <MessageCircle size={18} /> Messages
         </button>
@@ -1083,6 +1085,7 @@ function App() {
           onClick={() => {
             setActiveTab('profile');
             setProfileForm(profile);
+            setMobileMenuOpen(false);
           }}
         >
           <UserRound size={18} /> Profile
@@ -1120,9 +1123,12 @@ function App() {
         </div>
       </aside>
 
+      {mobileMenuOpen && <button className="sidebar-backdrop" aria-label="Close navigation menu" onClick={() => setMobileMenuOpen(false)} />}
       <section className="main-panel">
         <header className="dashboard-header">
-          <div>
+          <div className="dashboard-heading">
+            <button className="icon-button mobile-menu-toggle" aria-label="Open navigation menu" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(value => !value)}><Menu size={20} /></button>
+            <div>
             <p className="breadcrumb">
               WORKSPACE <span>/</span> {activeTab.toUpperCase()}
             </p>
@@ -1135,6 +1141,7 @@ function App() {
                     ? 'Your conversations'
                     : 'Profile'}
             </h1>
+            </div>
           </div>
           <div className="header-actions">
             <button className="icon-button theme-toggle" title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'} onClick={() => setDarkMode(value => !value)}>{darkMode ? <Sun size={17} /> : <Moon size={17} />}</button>
@@ -1142,9 +1149,9 @@ function App() {
               <MapPin size={15} /> {profile.state || profile.country}
             </span>
             <button className="icon-button notification-toggle" title="Notifications" onClick={() => setShowNotifications(value => !value)}><Bell size={18} />{(data.notifications ?? []).filter(item => !item.read).length > 0 && <i>{(data.notifications ?? []).filter(item => !item.read).length}</i>}</button>
-            <span className="user-avatar profile-avatar-wrap">
+            <button className="user-avatar profile-avatar-wrap header-profile-button" type="button" title="Open profile" aria-label="Open your profile" onClick={() => { setActiveTab('profile'); setProfileForm(profile); setShowNotifications(false); }}>
               {profile.profileImage ? <img src={profile.profileImage} alt="Profile" onError={event => { event.currentTarget.style.display = 'none'; }} /> : profile.fullName.slice(0, 1).toUpperCase()}
-            </span>
+            </button>
           </div>
         </header>
 
