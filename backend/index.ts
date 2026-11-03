@@ -841,8 +841,15 @@ export const handler = router({
       const createdAt = new Date().toISOString();
       const [id] = await db.add('messages', [{ jobId, senderId: currentUser.userId, senderName: profile.fullName, text, createdAt, deliveryStatus: 'sent' }]);
       if (!id) return error('Message could not be sent.', 500);
-      await notifySubscribers('job-chat', jobId, { message: { id, jobId, senderId: currentUser.userId, senderName: profile.fullName, text, createdAt } });
-      return json({ id, sent: true });
+      // The message is already persisted. A transient realtime delivery failure must not
+      // make the client believe the send failed and encourage duplicate message retries.
+      let realtimeNotified = true;
+      try {
+        await notifySubscribers('job-chat', jobId, { message: { id, jobId, senderId: currentUser.userId, senderName: profile.fullName, text, createdAt } });
+      } catch {
+        realtimeNotified = false;
+      }
+      return json({ id, sent: true, realtimeNotified });
     },
   ],
 
