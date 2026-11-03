@@ -255,6 +255,16 @@ export const handler = router({
         return error('Add at least one skill or service.', 400);
       }
       const existing = await getProfile(currentUser.userId);
+      // A verification decision applies to the identity details that were reviewed.
+      // Any change to those details invalidates the previous status and request link.
+      const identityChanged = Boolean(existing && (
+        existing.fullName !== fullName ||
+        existing.email !== email ||
+        existing.phone !== phone ||
+        existing.address !== address ||
+        existing.country !== country ||
+        existing.state !== state
+      ));
       const profile: Profile = {
         role,
         fullName,
@@ -274,7 +284,8 @@ export const handler = router({
         profileImage: existing?.profileImage,
         profileImagePath: existing?.profileImagePath,
         portfolio,
-        verificationStatus: existing?.verificationStatus ?? 'none',
+        verificationStatus: identityChanged ? 'none' : (existing?.verificationStatus ?? 'none'),
+        verificationRequestId: identityChanged ? undefined : existing?.verificationRequestId,
       };
       const [saved] = await db.tx.update('profiles', [
         {
