@@ -2193,3 +2193,45 @@ a {
   width: 100%;
   box-sizing: border-box;
 }
+
+/* SkillHub responsive left navigation — synced from the deployed app. */
+.app-shell { display:grid; grid-template-columns:210px minmax(0,1fr); min-height:100vh; }
+.sidebar { position:sticky; top:0; width:210px; height:100vh; min-height:100vh; padding:22px 14px 14px; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:6px; overflow:hidden; border-top:0; border-right:1px solid #e3e9f4; background:#fff; box-shadow:8px 0 28px #24365b08; }
+.side-brand { display:inline-flex; padding:0 8px 28px; }
+.sidebar-label { display:block; padding:0 10px 8px; }
+.sidebar-bottom { display:block; margin-top:auto; }
+.sidebar > .side-link { display:flex; flex:0 0 auto; flex-direction:row; align-items:center; justify-content:flex-start; width:100%; max-width:none; min-height:46px; margin:0; padding:0 12px; gap:11px; font-size:12px; text-align:left; }
+.side-count { display:inline-grid; margin-left:auto; }
+.main-panel { min-width:0; padding:0 clamp(20px,3vw,44px) 48px; }
+.dashboard-heading { display:flex; align-items:center; gap:10px; }
+.mobile-menu-toggle,.sidebar-backdrop { display:none; }
+.header-profile-button { border:0; padding:0; cursor:pointer; }
+.header-profile-button:focus-visible { outline:3px solid #7ea2ff; outline-offset:3px; }
+.skillhub-dark .sidebar { background:#172337f2; border-right-color:#40516c; }
+@media (max-width:760px) {
+  .app-shell { display:block; }
+  .sidebar { position:fixed; z-index:60; inset:0 auto 0 0; width:min(82vw,290px); height:100dvh; min-height:0; padding:22px 16px; gap:8px; overflow:hidden; border-right:1px solid #dfe5f4; border-radius:0 18px 18px 0; box-shadow:18px 0 48px #14213d30; transform:translateX(-105%); transition:transform .22s ease; }
+  .sidebar.mobile-open { transform:translateX(0); }
+  .side-brand { display:inline-flex; padding:0 6px 24px; }
+  .sidebar-label { display:block; padding:0 10px 8px; }
+  .sidebar-bottom { display:block; margin-top:auto; }
+  .sidebar > .side-link { display:flex; flex:0 0 auto; flex-direction:row; width:100%; max-width:none; min-height:46px; padding:0 12px; margin:0; gap:11px; font-size:12px; text-align:left; }
+  .side-count { display:inline-grid; margin-left:auto; }
+  .sidebar-backdrop { display:block; position:fixed; inset:0; z-index:55; border:0; background:#101a2d70; }
+  .mobile-menu-toggle { display:grid; flex:0 0 auto; width:40px; height:40px; border:1px solid #dce5f5; background:#fff; color:#315de8; }
+  .main-panel { padding:0 16px 40px; }
+  .dashboard-header { gap:8px; }
+  .dashboard-heading { min-width:0; }
+  .dashboard-heading h1 { font-size:clamp(18px,5vw,25px); }
+}
+@media (min-width:761px) {
+  .app-shell { grid-template-columns:210px minmax(0,1fr); }
+  .sidebar { width:210px; height:100vh; padding:22px 14px 14px; }
+  .sidebar > .side-link { flex:0 0 auto; flex-direction:row; gap:9px; font-size:12px; }
+  .main-panel { padding-left:clamp(24px,3vw,48px); padding-right:clamp(24px,3vw,48px); padding-bottom:48px; }
+}
+@media (max-height:700px) and (min-width:761px) {
+  .sidebar { padding-top:14px; padding-bottom:10px; gap:4px; }
+  .side-brand { padding-bottom:16px; }
+  .sidebar-help { padding:10px; margin-bottom:8px; }
+}
