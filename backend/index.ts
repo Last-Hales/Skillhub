@@ -522,6 +522,9 @@ export const handler = router({
       if (!profile.available) return error('Mark yourself available before applying.', 400);
       const job = await getOpportunity(params.id);
       if (!job || job.status !== 'open') return error('This job is no longer accepting applications.', 409);
+      if (job.kind === 'team' && job.customerId === currentUser.userId) {
+        return error('You cannot apply to your own Team-Up.', 403);
+      }
       if (!job.skill.toLowerCase().split(/[,/ ]+/).some(word => word.length > 2 && profile.skills.toLowerCase().includes(word))) {
         return error('Your listed skills do not appear to match this job. Update your profile if needed.', 400);
       }
@@ -660,6 +663,10 @@ export const handler = router({
       const job = await getOpportunity(params.id);
       if (!job) return error('Opportunity not found.', 404);
       if (job.kind === 'team') return error('Apply to a Team-Up through its application flow. The team organiser selects members.', 409);
+      if (job.status !== 'open') return error('This opportunity is no longer open.', 409);
+      if (!job.skill.toLowerCase().split(/[,/ ]+/).some(word => word.length > 2 && profile.skills.toLowerCase().includes(word))) {
+        return error('Your listed skills do not appear to match this job. Update your profile if needed.', 400);
+      }
       const [accepted] = await db.tx.update(
         'opportunities',
         [
@@ -679,6 +686,14 @@ export const handler = router({
           'This opportunity has already been accepted or is no longer open.',
           409
         );
+      await db.add('notifications', [{
+        userId: job.customerId,
+        title: 'A worker accepted your job',
+        body: profile.fullName + ' accepted ' + job.skill,
+        jobId: params.id,
+        read: false,
+        createdAt: new Date().toISOString(),
+      }]);
       return json({ accepted: true, id: params.id });
     },
   ],
